@@ -2,7 +2,7 @@
 
 An MCP (Model Context Protocol) server for Elsevier's Scopus APIs, enabling direct academic paper search, analysis, and researcher information retrieval through Cursor IDE's AI Composer.
 
-🌐 **Repository**: https://github.com/yasufumi-nakata/elsevier-mcp-server
+🌐 **Repository**: https://github.com/yasufumi-nakata/Elsevier_MCP
 📖 **日本語版README**: [README_ja.md](README_ja.md)
 
 ## 📚 Overview
@@ -64,11 +64,18 @@ You need the following environment:
 
 ```bash
 # Clone project from GitHub
-git clone https://github.com/yasufumi-nakata/elsevier-mcp-server.git
-cd elsevier-mcp-server
+git clone https://github.com/yasufumi-nakata/Elsevier_MCP.git
+cd Elsevier_MCP
 
 # Install required Python libraries
 pip install -r requirements.txt
+```
+
+Package install is also supported:
+
+```bash
+pip install -e .
+elsevier-mcp-server
 ```
 
 ### Step 3: Obtain Elsevier API Key
