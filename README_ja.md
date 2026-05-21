@@ -2,7 +2,7 @@
 
 ElsevierのScopus APIを活用したMCP (Model Context Protocol) サーバーです。Cursor IDE のAI Composerから直接学術論文の検索・分析・研究者情報取得が可能になります。
 
-🌐 **リンク**：https://github.com/yasufumi-nakata/elsevier-mcp-server
+🌐 **リンク**：https://github.com/yasufumi-nakata/Elsevier_MCP
 📖 **English README**: [README.md](README.md)
 
 ## 📚 概要
@@ -56,7 +56,7 @@ ElsevierのScopus APIを活用したMCP (Model Context Protocol) サーバーで
 ### ステップ1: 必要な環境を確認
 
 以下の環境が必要です：
-- 🐍 **Python 3.7以上** (Python 3.10以上を推奨)
+- 🐍 **Python 3.10以上** (Python 3.10以上を推奨)
 - 💻 **Cursor IDE** (最新版を使用してください)
 - 🔑 **Elsevier API Key** (Elsevier Developer Portalから取得)
 
@@ -64,11 +64,11 @@ ElsevierのScopus APIを活用したMCP (Model Context Protocol) サーバーで
 
 ```bash
 # GitHubからプロジェクトをクローン
-git clone https://github.com/yasufumi-nakata/elsevier-mcp-server.git
-cd elsevier-mcp-server
+git clone https://github.com/yasufumi-nakata/Elsevier_MCP.git
+cd Elsevier_MCP
 
 # 必要なPythonライブラリをインストール
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ### ステップ3: Elsevier API Keyを取得
@@ -120,8 +120,8 @@ export ELSEVIER_API_KEY="your_api_key_here"
   "mcpServers": {
     "elsevier-research": {
       "comment": "🔬 Elsevier学術論文検索MCP",
-      "command": "python3",
-      "args": ["/フルパス/to/elsevier_mcp_complete.py"],
+      "command": "elsevier-mcp-server",
+      "args": [],
       "env": {
         "ELSEVIER_API_KEY": "ここにあなたのAPIキーを入力"
       }
@@ -131,14 +131,14 @@ export ELSEVIER_API_KEY="your_api_key_here"
 ```
 
 **重要**:
-- `/フルパス/to/elsevier_mcp_complete.py` を実際のファイルパスに置き換えてください
+- Cursor から見える Python 環境にこの package をインストールしてください
 - `ここにあなたのAPIキーを入力` を取得したAPIキーに置き換えてください
 
 #### 4-3. 設定を保存して確認
 
 1. 設定ファイルを保存 (`⌘ + S` または `Ctrl + S`)
 2. MCPサーバーリストに緑色のマークが表示されれば成功です
-3. エラーが表示される場合は、ファイルパスやAPIキーを再確認してください
+3. エラーが表示される場合は、package のインストール状態とAPIキーを再確認してください
 
 ## 📖 使用方法
 
@@ -203,16 +203,16 @@ export ELSEVIER_API_KEY="your_api_key_here"
 ## 🧪 テスト
 
 ```bash
-# APIテストの実行
+# package と metadata の確認
+python -m compileall -q elsevier_mcp_complete.py examples test.py
+python -m build
+python -m twine check dist/*
+
+# live APIテスト（ELSEVIER_API_KEY が必要）
 python test.py
 
-# 個別機能テスト
-python -c "
-import json
-from elsevier_mcp_complete import search_papers
-result = search_papers('artificial intelligence', 3)
-print(json.dumps(result, indent=2, ensure_ascii=False))
-"
+# handler を直接呼ぶサンプル
+python examples/basic_usage.py
 ```
 
 ## 🔧 トラブルシューティング
@@ -224,19 +224,13 @@ print(json.dumps(result, indent=2, ensure_ascii=False))
 **症状**: Cursor設定でMCPサーバーに赤いマークが表示される
 
 **解決方法**:
-1. **ファイルパスを確認**:
+1. **console command がインストールされているか確認**:
    ```bash
-   # ファイルの場所を確認
-   ls -la /your/path/to/elsevier_mcp_complete.py
+   elsevier-mcp-server --version
    ```
-2. **Python実行権限を確認**:
+2. **必要なライブラリを再インストール**:
    ```bash
-   # ファイルに実行権限を付与
-   chmod +x elsevier_mcp_complete.py
-   ```
-3. **必要なライブラリを再インストール**:
-   ```bash
-   pip install -r requirements.txt
+   pip install -e .
    ```
 
 #### 問題2: 「APIキーエラーが発生する」
@@ -244,7 +238,7 @@ print(json.dumps(result, indent=2, ensure_ascii=False))
 **症状**: `401 Unauthorized` エラー、「Invalid API Key」、または「ELSEVIER_API_KEY environment variable is not set」
 
 **解決方法**:
-1. **「environment variable is not set」でサーバーが終了する場合**: APIキーが見つからない場合、MCPサーバーは自動的に終了します
+1. **tool が「environment variable is not set」を返す場合**: MCPサーバー自体はAPIキーなしでも起動できますが、APIを呼ぶtoolにはAPIキーが必要です
    - APIキーを設定: `export ELSEVIER_API_KEY="your_api_key_here"`
    - CursorでMCPサーバーを再起動
 2. **APIキーの形式を確認**: 32文字の英数字であることを確認
@@ -290,7 +284,7 @@ print(json.dumps(result, indent=2, ensure_ascii=False))
 
 ### 📞 サポートが必要な場合
 
-1. **GitHub Issues**: [問題を報告](https://github.com/yasufumi-nakata/elsevier-mcp-server/issues)
+1. **GitHub Issues**: [問題を報告](https://github.com/yasufumi-nakata/Elsevier_MCP/issues)
 2. **Elsevier API サポート**: apisupport@elsevier.com
 3. **Cursor サポート**: [Cursor ヘルプセンター](https://docs.cursor.com/)
 
@@ -298,7 +292,7 @@ print(json.dumps(result, indent=2, ensure_ascii=False))
 
 設定が正しく動作しているかを確認するために：
 
-- [ ] Python 3.7+ がインストールされている
+- [ ] Python 3.10+ がインストールされている
 - [ ] 必要なライブラリがインストールされている
 - [ ] Elsevier API キーが有効
 - [ ] CursorのMCP設定でサーバーが緑色
@@ -346,11 +340,11 @@ print(json.dumps(result, indent=2, ensure_ascii=False))
 ## 📞 サポート・お問い合わせ
 
 ### 🐛 問題の報告
-- **GitHub Issues**: [問題を報告する](https://github.com/yasufumi-nakata/elsevier-mcp-server/issues)
-- **Feature Request**: [新機能をリクエスト](https://github.com/yasufumi-nakata/elsevier-mcp-server/issues/new)
+- **GitHub Issues**: [問題を報告する](https://github.com/yasufumi-nakata/Elsevier_MCP/issues)
+- **Feature Request**: [新機能をリクエスト](https://github.com/yasufumi-nakata/Elsevier_MCP/issues/new)
 
 ### 💬 質問・議論
-- **GitHub Discussions**: [議論に参加](https://github.com/yasufumi-nakata/elsevier-mcp-server/discussions)
+- **GitHub Discussions**: [議論に参加](https://github.com/yasufumi-nakata/Elsevier_MCP/discussions)
 - **Elsevier API サポート**: apisupport@elsevier.com
 
 ### 📝 フィードバック
@@ -390,5 +384,5 @@ print(json.dumps(result, indent=2, ensure_ascii=False))
 
 ---
 **🔬 Elsevier MCP Server** - Academic Research Made Easier with AI
-**📝 Last Updated**: 2024年12月
-**🌟 GitHub**: https://github.com/yasufumi-nakata/elsevier-mcp-server
+**📝 Last Updated**: 2026年5月21日
+**🌟 GitHub**: https://github.com/yasufumi-nakata/Elsevier_MCP

@@ -6,7 +6,7 @@
 
 ### バグ報告
 
-バグを見つけた場合は、以下の情報を含めて[Issue](https://github.com/yourusername/elsevier-mcp-server/issues)を作成してください：
+バグを見つけた場合は、以下の情報を含めて[Issue](https://github.com/yasufumi-nakata/Elsevier_MCP/issues)を作成してください：
 
 - **環境情報**:
   - OS (Windows/macOS/Linux)
@@ -79,11 +79,13 @@ def search_papers(query: str, count: int = 10) -> dict:
 新機能やバグ修正には、適切なテストを含めてください：
 
 ```bash
-# テストの実行
-python test.py
+# 構文とpackage metadataの確認
+python -m compileall -q elsevier_mcp_complete.py examples test.py
+python -m build
+python -m twine check dist/*
 
-# 特定の機能のテスト
-python -m pytest tests/test_specific_feature.py
+# APIキーを持っている場合のlive API確認
+python test.py
 ```
 
 ### コミットメッセージ
@@ -111,8 +113,8 @@ feat: add institution paper statistics endpoint
 
 ### 1. リポジトリのクローン
 ```bash
-git clone https://github.com/yourusername/elsevier-mcp-server.git
-cd elsevier-mcp-server
+git clone https://github.com/yasufumi-nakata/Elsevier_MCP.git
+cd Elsevier_MCP
 ```
 
 ### 2. 仮想環境の作成
@@ -125,8 +127,8 @@ venv\Scripts\activate     # Windows
 
 ### 3. 依存関係のインストール
 ```bash
-pip install -r requirements.txt
-pip install -r requirements-dev.txt  # 開発用依存関係（作成予定）
+pip install -e .
+pip install build twine  # package validation tooling
 ```
 
 ### 4. 環境変数の設定
@@ -140,7 +142,8 @@ export ELSEVIER_API_KEY="your_test_api_key"
 
 - [ ] コードはPEP 8に準拠している
 - [ ] 新機能にはテストが含まれている
-- [ ] 既存のテストがすべてパスする
+- [ ] `compileall`、`python -m build`、`twine check` がパスする
+- [ ] API呼び出しを変更した場合は、live API確認結果または未実行理由をPRに書く
 - [ ] ドキュメントが更新されている（必要に応じて）
 - [ ] CHANGELOG.mdが更新されている（重要な変更の場合）
 
@@ -161,8 +164,8 @@ Issues と Pull Requests で使用されるラベル：
 開発に関する質問がある場合：
 
 1. 既存のIssuesを検索してください
-2. [Discussions](https://github.com/yourusername/elsevier-mcp-server/discussions)で質問してください
-3. 緊急の場合は[your-email@example.com]まで連絡してください
+2. [Discussions](https://github.com/yasufumi-nakata/Elsevier_MCP/discussions)で質問してください
+3. セキュリティ上の問題は、公開Issueではなく maintainer の private contact に連絡してください
 
 ## 📄 ライセンス
 

@@ -2,3 +2,45 @@
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "elsevier-mcp-server"
+version = "1.0.1"
+description = "MCP server for Elsevier academic APIs including Scopus, SciVal, and Abstract Retrieval."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Yasufumi Nakata" }]
+keywords = ["elsevier", "scopus", "scival", "academic", "research", "mcp"]
+dependencies = [
+  "requests>=2.31.0",
+  "mcp>=1.0.0",
+  "pydantic>=2.0.0",
+  "typing-extensions>=4.0.0",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Education",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+[project.scripts]
+elsevier-mcp-server = "elsevier_mcp_complete:main"
+
+[project.urls]
+Homepage = "https://github.com/yasufumi-nakata/Elsevier_MCP"
+Repository = "https://github.com/yasufumi-nakata/Elsevier_MCP"
+Issues = "https://github.com/yasufumi-nakata/Elsevier_MCP/issues"
+"Elsevier Developer" = "https://dev.elsevier.com/"
+
+[tool.setuptools]
+py-modules = ["elsevier_mcp_complete"]
+
+[tool.ruff]
+line-length = 120

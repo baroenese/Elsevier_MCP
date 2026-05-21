@@ -8,7 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial project setup for GitHub publication
+- GitHub Actions CI and release workflows.
+- Pull request template and security policy.
+
+### Changed
+- Modernized package metadata with `pyproject.toml`.
+- Updated MCP installation docs to use the `elsevier-mcp-server` console command.
+
+### Fixed
+- Fixed source distribution builds by including the runtime module and package metadata.
+- Removed committed virtual environment and Python bytecode artifacts from version control.
 
 ## [1.0.0] - 2024-12-20
 

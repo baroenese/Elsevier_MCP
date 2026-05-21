@@ -9,17 +9,20 @@ import json
 import sys
 import requests
 import os
-from datetime import datetime
-
-# Elsevier API設定
-API_KEY = os.getenv("ELSEVIER_API_KEY")
-if not API_KEY:
-    print("❌ Error: ELSEVIER_API_KEY environment variable is not set", file=sys.stderr)
-    print("Please set your API key: export ELSEVIER_API_KEY='your_api_key_here'", file=sys.stderr)
-    sys.exit(1)
 
 BASE_URL = "https://api.elsevier.com"
-HEADERS = {"X-ELS-APIKey": API_KEY, "Accept": "application/json"}
+VERSION = "1.0.1"
+
+
+def get_headers() -> dict:
+    """Return Elsevier API request headers or raise a clear configuration error."""
+    api_key = os.getenv("ELSEVIER_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "ELSEVIER_API_KEY environment variable is not set. "
+            "Set it before calling Elsevier tools."
+        )
+    return {"X-ELS-APIKey": api_key, "Accept": "application/json"}
 
 class ElsevierMCPServer:
     def __init__(self):
@@ -161,7 +164,7 @@ class ElsevierMCPServer:
         }
 
         try:
-            response = requests.get(url, headers=HEADERS, params=params, timeout=15)
+            response = requests.get(url, headers=get_headers(), params=params, timeout=15)
             if response.ok:
                 data = response.json()
                 entries = data.get('search-results', {}).get('entry', [])
@@ -207,7 +210,7 @@ class ElsevierMCPServer:
             url = f"{BASE_URL}/content/abstract/doi/{doi}"
 
         try:
-            response = requests.get(url, headers=HEADERS, timeout=10)
+            response = requests.get(url, headers=get_headers(), timeout=10)
             if response.ok:
                 data = response.json()
                 abstract_response = data.get('abstracts-retrieval-response', {})
@@ -241,7 +244,7 @@ class ElsevierMCPServer:
         url = f"{BASE_URL}/analytics/scival/author/{author_id}"
 
         try:
-            response = requests.get(url, headers=HEADERS, timeout=10)
+            response = requests.get(url, headers=get_headers(), timeout=10)
             if response.ok:
                 data = response.json()
                 author_data = data.get('author', {})
@@ -278,7 +281,7 @@ class ElsevierMCPServer:
                     "count": 1
                 }
 
-                response = requests.get(url, headers=HEADERS, params=params, timeout=10)
+                response = requests.get(url, headers=get_headers(), params=params, timeout=10)
                 if response.ok:
                     data = response.json()
                     total = int(data.get('search-results', {}).get('opensearch:totalResults', 0))
@@ -321,7 +324,7 @@ class ElsevierMCPServer:
         }
 
         try:
-            response = requests.get(url, headers=HEADERS, params=params, timeout=15)
+            response = requests.get(url, headers=get_headers(), params=params, timeout=15)
             if response.ok:
                 data = response.json()
                 entries = data.get('search-results', {}).get('entry', [])
@@ -367,7 +370,7 @@ class ElsevierMCPServer:
         }
 
         try:
-            response = requests.get(url, headers=HEADERS, params=params, timeout=15)
+            response = requests.get(url, headers=get_headers(), params=params, timeout=15)
             if response.ok:
                 data = response.json()
                 entries = data.get('search-results', {}).get('entry', [])
@@ -413,7 +416,7 @@ async def handle_request(server, request):
                 },
                 "serverInfo": {
                     "name": "elsevier-mcp-complete-server",
-                    "version": "1.0.0"
+                    "version": VERSION
                 }
             }
         }
@@ -466,7 +469,7 @@ async def handle_request(server, request):
             "error": {"code": -32601, "message": f"Method not found: {method}"}
         }
 
-async def main():
+async def run_stdio():
     """メイン処理"""
     server = ElsevierMCPServer()
     print("Elsevier MCP Complete Server started", file=sys.stderr)
@@ -493,5 +496,26 @@ async def main():
             }
             print(json.dumps(error_response), flush=True)
 
+def main() -> int:
+    """Console entry point for the stdio MCP server."""
+    if "--version" in sys.argv:
+        print(VERSION)
+        return 0
+
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("Usage: elsevier-mcp-server [--version]")
+        print("Runs the Elsevier MCP server over stdio.")
+        return 0
+
+    if not os.getenv("ELSEVIER_API_KEY"):
+        print(
+            "Warning: ELSEVIER_API_KEY is not set; tools will return configuration errors until it is set.",
+            file=sys.stderr,
+        )
+
+    asyncio.run(run_stdio())
+    return 0
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    raise SystemExit(main())

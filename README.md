@@ -56,7 +56,7 @@ For detailed terms, visit the [Elsevier Developer Portal](https://dev.elsevier.c
 ### Step 1: Verify Required Environment
 
 You need the following environment:
-- 🐍 **Python 3.7 or higher** (Python 3.10+ recommended)
+- 🐍 **Python 3.10 or higher** (Python 3.10+ recommended)
 - 💻 **Cursor IDE** (Please use the latest version)
 - 🔑 **Elsevier API Key** (Available from Elsevier Developer Portal)
 
@@ -68,14 +68,7 @@ git clone https://github.com/yasufumi-nakata/Elsevier_MCP.git
 cd Elsevier_MCP
 
 # Install required Python libraries
-pip install -r requirements.txt
-```
-
-Package install is also supported:
-
-```bash
 pip install -e .
-elsevier-mcp-server
 ```
 
 ### Step 3: Obtain Elsevier API Key
@@ -127,8 +120,8 @@ export ELSEVIER_API_KEY="your_api_key_here"
   "mcpServers": {
     "elsevier-research": {
       "comment": "🔬 Elsevier Academic Paper Search MCP",
-      "command": "python3",
-      "args": ["/full/path/to/elsevier_mcp_complete.py"],
+      "command": "elsevier-mcp-server",
+      "args": [],
       "env": {
         "ELSEVIER_API_KEY": "insert_your_api_key_here"
       }
@@ -138,14 +131,14 @@ export ELSEVIER_API_KEY="your_api_key_here"
 ```
 
 **Important**:
-- Replace `/full/path/to/elsevier_mcp_complete.py` with the actual file path
+- Install the package in the same Python environment that Cursor can access
 - Replace `insert_your_api_key_here` with your obtained API key
 
 #### 4-3. Save and Verify Settings
 
 1. Save the configuration file (`⌘ + S` or `Ctrl + S`)
 2. Green indicator in MCP server list indicates success
-3. If errors appear, double-check file path and API key
+3. If errors appear, double-check the package installation and API key
 
 ## 📖 Usage Guide
 
@@ -210,16 +203,16 @@ Input questions like the following:
 ## 🧪 Testing
 
 ```bash
-# Run API tests
+# Package and metadata checks
+python -m compileall -q elsevier_mcp_complete.py examples test.py
+python -m build
+python -m twine check dist/*
+
+# Live API tests (requires ELSEVIER_API_KEY)
 python test.py
 
-# Test individual functions
-python -c "
-import json
-from elsevier_mcp_complete import search_papers
-result = search_papers('artificial intelligence', 3)
-print(json.dumps(result, indent=2, ensure_ascii=False))
-"
+# Direct handler examples
+python examples/basic_usage.py
 ```
 
 ## 🔧 Troubleshooting
@@ -231,19 +224,13 @@ print(json.dumps(result, indent=2, ensure_ascii=False))
 **Symptoms**: Red indicator appears for MCP server in Cursor settings
 
 **Solutions**:
-1. **Check file path**:
+1. **Check the console command is installed**:
    ```bash
-   # Verify file location
-   ls -la /your/path/to/elsevier_mcp_complete.py
+   elsevier-mcp-server --version
    ```
-2. **Check Python execution permissions**:
+2. **Reinstall required libraries**:
    ```bash
-   # Grant execution permissions to file
-   chmod +x elsevier_mcp_complete.py
-   ```
-3. **Reinstall required libraries**:
-   ```bash
-   pip install -r requirements.txt
+   pip install -e .
    ```
 
 #### Issue 2: "API Key Error Occurs"
@@ -251,7 +238,7 @@ print(json.dumps(result, indent=2, ensure_ascii=False))
 **Symptoms**: `401 Unauthorized` error, "Invalid API Key", or "ELSEVIER_API_KEY environment variable is not set"
 
 **Solutions**:
-1. **If server exits with "environment variable is not set"**: The MCP server automatically exits if no API key is found
+1. **If a tool returns "environment variable is not set"**: The MCP server can start without an API key, but API-backed tools need it
    - Set your API key: `export ELSEVIER_API_KEY="your_api_key_here"`
    - Restart the MCP server in Cursor
 2. **Check API key format**: Confirm it's 32 alphanumeric characters
@@ -297,7 +284,7 @@ print(json.dumps(result, indent=2, ensure_ascii=False))
 
 ### 📞 When You Need Support
 
-1. **GitHub Issues**: [Report Issues](https://github.com/yasufumi-nakata/elsevier-mcp-server/issues)
+1. **GitHub Issues**: [Report Issues](https://github.com/yasufumi-nakata/Elsevier_MCP/issues)
 2. **Elsevier API Support**: apisupport@elsevier.com
 3. **Cursor Support**: [Cursor Help Center](https://docs.cursor.com/)
 
@@ -305,7 +292,7 @@ print(json.dumps(result, indent=2, ensure_ascii=False))
 
 To confirm settings are working correctly:
 
-- [ ] Python 3.7+ is installed
+- [ ] Python 3.10+ is installed
 - [ ] Required libraries are installed
 - [ ] Elsevier API key is valid
 - [ ] Server shows green in Cursor MCP settings
@@ -353,11 +340,11 @@ Pull requests and issue reports are welcome!
 ## 📞 Support & Contact
 
 ### 🐛 Issue Reporting
-- **GitHub Issues**: [Report Issues](https://github.com/yasufumi-nakata/elsevier-mcp-server/issues)
-- **Feature Request**: [Request New Features](https://github.com/yasufumi-nakata/elsevier-mcp-server/issues/new)
+- **GitHub Issues**: [Report Issues](https://github.com/yasufumi-nakata/Elsevier_MCP/issues)
+- **Feature Request**: [Request New Features](https://github.com/yasufumi-nakata/Elsevier_MCP/issues/new)
 
 ### 💬 Questions & Discussions
-- **GitHub Discussions**: [Join Discussions](https://github.com/yasufumi-nakata/elsevier-mcp-server/discussions)
+- **GitHub Discussions**: [Join Discussions](https://github.com/yasufumi-nakata/Elsevier_MCP/discussions)
 - **Elsevier API Support**: apisupport@elsevier.com
 
 ### 📝 Feedback
@@ -397,5 +384,5 @@ Pull requests and issues are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for
 
 ---
 **🔬 Elsevier MCP Server** - Academic Research Made Easier with AI
-**📝 Last Updated**: December 2024
-**🌟 GitHub**: https://github.com/yasufumi-nakata/elsevier-mcp-server
+**📝 Last Updated**: May 21, 2026
+**🌟 GitHub**: https://github.com/yasufumi-nakata/Elsevier_MCP

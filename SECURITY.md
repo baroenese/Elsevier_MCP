@@ -1,14 +1,17 @@
 # Security Policy
 
-## Reporting
+## Supported Versions
 
-Use GitHub private vulnerability reporting if it is enabled for this repository. If it is not enabled, open a minimal public issue that says a security report is available, but do not include secrets, exploit details, API keys, or private data in the issue body.
+Security fixes are made on the `main` branch and included in the next tagged release.
 
-## Scope
+## Reporting a Vulnerability
 
-Security-sensitive reports include credential leakage, unsafe handling of Elsevier API data, dependency compromise, command injection, and workflows that expose repository tokens.
+Please report security issues privately to the repository maintainer instead of opening a public issue with exploit details.
 
-## Handling
+Do not include real Elsevier API keys, institutional tokens, licensed full text, or private search output in reports. Use redacted examples and describe the affected command or MCP tool.
 
-Maintainers should confirm receipt, reproduce the issue in a private branch when needed, rotate any exposed credentials, and publish a fix with a short advisory or release note.
+## Secret Handling
 
+- Never commit `.env` files, API keys, institutional tokens, or cached licensed responses.
+- Rotate any Elsevier, Discord, OpenAI, or institutional token that was pushed publicly.
+- Keep live API tests opt-in through environment variables.
