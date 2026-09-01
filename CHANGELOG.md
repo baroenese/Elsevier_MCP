@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - GitHub Actions CI and release workflows.
 - Pull request template and security policy.
+- Antigravity project rules (`GEMINI.md`) and development skill (`elsevier-mcp-dev`).
 
 ### Changed
 - Modernized package metadata with `pyproject.toml`.
@@ -18,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed source distribution builds by including the runtime module and package metadata.
 - Removed committed virtual environment and Python bytecode artifacts from version control.
+- Fixed Scopus institution paper search query syntax (`AFFIL("...")` instead of `aff(...)`).
+- Fixed string-to-integer conversion for `opensearch:totalResults` in `test.py`.
 
 ## [1.0.0] - 2024-12-20
 

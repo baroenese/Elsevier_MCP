@@ -318,7 +318,7 @@ class ElsevierMCPServer:
 
         url = f"{BASE_URL}/content/search/scopus"
         params = {
-            "query": f"aff({institution}) AND PUBYEAR = {year}",
+            "query": f'AFFIL("{institution}") AND PUBYEAR = {year}',
             "count": 5,
             "sort": "citedby-count"
         }

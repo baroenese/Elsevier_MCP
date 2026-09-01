@@ -36,7 +36,7 @@ class ElsevierAPITester:
             sys.exit(1)
 
         # テスト用のデフォルト値
-        self.test_eid = os.getenv('TEST_EID', '2-s2.0-85186984142')
+        self.test_eid = os.getenv('TEST_EID', '2-s2.0-0035478854')
         self.test_author_id = os.getenv('TEST_AUTHOR_ID', '57215842016')
         self.test_orcid = '0000-0003-1419-2405'
 
@@ -81,7 +81,7 @@ class ElsevierAPITester:
 
             if response.status_code == 200:
                 data = response.json()
-                total_results = data.get('search-results', {}).get('opensearch:totalResults', 0)
+                total_results = int(data.get('search-results', {}).get('opensearch:totalResults', 0))
                 print(f"✅ 成功: ロボティクス関連論文 {total_results:,} 件見つかりました")
 
                 # 最初の結果を表示
