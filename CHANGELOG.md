@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Actions CI and release workflows.
 - Pull request template and security policy.
 - Antigravity project rules (`GEMINI.md`) and development skill (`elsevier-mcp-dev`).
+- Support for explicit Scopus field code queries (`AUTH`, `TITLE`, `DOI`, `AFFIL`, etc.) in `search_papers`.
 
 ### Changed
 - Modernized package metadata with `pyproject.toml`.

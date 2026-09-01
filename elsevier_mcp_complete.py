@@ -151,9 +151,17 @@ class ElsevierMCPServer:
         count = arguments.get("count", 10)
         year = arguments.get("year", "")
 
-        # クエリ構築
-        search_query = f"TITLE-ABS-KEY({query})"
-        if year:
+        # クエリ構築: 既にフィールドコードが指定されている場合はそのまま使用、それ以外は TITLE-ABS-KEY でラップ
+        field_codes = (
+            "TITLE-ABS-KEY(", "AUTH(", "AUTHOR-NAME(", "AFFIL(", "AFFILORG(",
+            "TITLE(", "ABS(", "KEY(", "DOI(", "SRCTITLE(", "ALL("
+        )
+        if any(code in query.upper() for code in field_codes):
+            search_query = query
+        else:
+            search_query = f"TITLE-ABS-KEY({query})"
+
+        if year and "PUBYEAR" not in search_query.upper():
             search_query += f" AND PUBYEAR = {year}"
 
         url = f"{BASE_URL}/content/search/scopus"
