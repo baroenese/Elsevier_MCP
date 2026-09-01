@@ -69,15 +69,28 @@ python -m twine check dist/*
 
 ## 3. Testing JSON-RPC Stdio Interface
 
-To manually test tool execution via stdio JSON-RPC:
+To manually test MCP protocol handlers via stdio JSON-RPC:
 
 ```bash
-# Initialize handshake
+# 1. Initialize handshake (declares tools, prompts, resources)
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | python elsevier_mcp_complete.py
 
-# List tools
+# 2. List tools
 echo '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | python elsevier_mcp_complete.py
 
-# Call a tool
+# 3. Call a tool
 echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_papers","arguments":{"query":"artificial intelligence","count":2}}}' | python elsevier_mcp_complete.py
+
+# 4. List prompts
+echo '{"jsonrpc":"2.0","id":4,"method":"prompts/list","params":{}}' | python elsevier_mcp_complete.py
+
+# 5. Get a prompt template
+echo '{"jsonrpc":"2.0","id":5,"method":"prompts/get","params":{"name":"systematic_literature_review","arguments":{"topic":"Reinforcement Learning","year_range":"2022-2024"}}}' | python elsevier_mcp_complete.py
+
+# 6. List static resources & dynamic templates
+echo '{"jsonrpc":"2.0","id":6,"method":"resources/list","params":{}}' | python elsevier_mcp_complete.py
+echo '{"jsonrpc":"2.0","id":7,"method":"resources/templates/list","params":{}}' | python elsevier_mcp_complete.py
+
+# 7. Read a resource
+echo '{"jsonrpc":"2.0","id":8,"method":"resources/read","params":{"uri":"elsevier://docs/scopus-search-syntax"}}' | python elsevier_mcp_complete.py
 ```

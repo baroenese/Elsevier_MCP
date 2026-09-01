@@ -193,12 +193,28 @@ export ELSEVIER_API_KEY="your_api_key_here"
 
 | ツール名 | 説明 | パラメータ |
 |---------|------|-----------|
-| `search_papers` | 論文検索 | `query`, `count`, `year` |
+| `search_papers` | 論文検索（キーワードまたは `AUTH`, `TITLE`, `AFFIL`, `DOI` フィールド指定） | `query`, `count`, `year` |
 | `get_paper_abstract` | 論文抄録取得 | `eid` または `doi` |
 | `get_author_info` | 著者情報取得 | `author_id` |
 | `analyze_research_trends` | 研究トレンド分析 | `field`, `years` |
 | `get_institution_papers` | 機関別論文統計 | `institution`, `year` |
 | `search_open_access_papers` | オープンアクセス論文検索 | `field`, `count` |
+
+## 📝 利用可能なMCPプロンプト (Prompts)
+
+| プロンプト名 | 説明 | 引数 |
+|-------------|------|-----|
+| `systematic_literature_review` | 手法比較表や研究ギャップ抽出を含む系統的文献レビューの生成 | `topic`（必須）, `year_range`, `focus` |
+| `paper_deep_dive` | 論文の詳細な批判的分析（研究課題、手法、主張と根拠、妥当性への脅威） | `paper_title_or_eid`（必須）, `analysis_depth` |
+| `research_trend_analysis` | 年別出版ボリューム推移、主要研究機関、新興サブ分野の分析 | `field`（必須）, `timeframe` |
+
+## 📦 利用可能なMCPリソース (Resources)
+
+| URI / テンプレート | タイプ | 説明 |
+|-------------------|-------|-----|
+| `elsevier://docs/scopus-search-syntax` | 静的 | Scopus検索クエリ構文、フィールドコード、論理演算子チートシート |
+| `elsevier://paper/{eid}` | 動的 | 指定されたEIDの論文抄録とメタデータをMarkdown形式で提供 |
+| `elsevier://trends/{field}` | 動的 | 指定された分野の年別論文出版推移と成長率をMarkdown形式で提供 |
 
 ## 🧪 テスト
 

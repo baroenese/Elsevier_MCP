@@ -193,12 +193,28 @@ Input questions like the following:
 
 | Tool Name | Description | Parameters |
 |-----------|-------------|------------|
-| `search_papers` | Paper search | `query`, `count`, `year` |
+| `search_papers` | Paper search (supports keywords and `AUTH`, `TITLE`, `AFFIL`, `DOI` field codes) | `query`, `count`, `year` |
 | `get_paper_abstract` | Paper abstract retrieval | `eid` or `doi` |
 | `get_author_info` | Author information | `author_id` |
 | `analyze_research_trends` | Research trend analysis | `field`, `years` |
 | `get_institution_papers` | Institution paper statistics | `institution`, `year` |
 | `search_open_access_papers` | Open access paper search | `field`, `count` |
+
+## 📝 Available MCP Prompts
+
+| Prompt Name | Description | Arguments |
+|-------------|-------------|-----------|
+| `systematic_literature_review` | Synthesizes state-of-the-art literature with methodology comparison tables and research gap discovery | `topic` (required), `year_range`, `focus` |
+| `paper_deep_dive` | Critical appraisal covering research questions, methodology, proof vs claims, and threats to validity | `paper_title_or_eid` (required), `analysis_depth` |
+| `research_trend_analysis` | Evaluates multi-year publication velocity, contributing institutions, and emerging sub-disciplines | `field` (required), `timeframe` |
+
+## 📦 Available MCP Resources
+
+| URI / Template | Type | Description |
+|----------------|------|-------------|
+| `elsevier://docs/scopus-search-syntax` | Static | Complete Scopus search syntax, field code cheatsheet, and Boolean logic guide |
+| `elsevier://paper/{eid}` | Dynamic | Fetches paper abstract and bibliographic metadata rendered in clean Markdown |
+| `elsevier://trends/{field}` | Dynamic | Fetches multi-year publication trends and growth statistics rendered in Markdown |
 
 ## 🧪 Testing
 

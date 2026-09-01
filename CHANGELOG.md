@@ -7,11 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-02
+
 ### Added
+- MCP Prompts protocol support (`prompts/list`, `prompts/get`) with built-in templates:
+  - `systematic_literature_review`: Multi-paper synthesis, methodology comparison tables, and research gap discovery.
+  - `paper_deep_dive`: Critical appraisal, methodology breakdown, and threats to validity.
+  - `research_trend_analysis`: Momentum analysis, publication volume velocity, and emerging subfield detection.
+- MCP Resources protocol support (`resources/list`, `resources/templates/list`, `resources/read`):
+  - `elsevier://docs/scopus-search-syntax`: Complete Scopus query syntax reference and boolean operator guide.
+  - `elsevier://paper/{eid}`: Dynamic resource rendering paper abstract and bibliographic metadata in Markdown.
+  - `elsevier://trends/{field}`: Dynamic resource rendering annual publication volume and growth rates in Markdown.
+- Support for explicit Scopus field code queries (`AUTH`, `TITLE`, `DOI`, `AFFIL`, etc.) in `search_papers` without nested wrapping.
+- Antigravity project rules (`GEMINI.md`) and development skill (`elsevier-mcp-dev`).
 - GitHub Actions CI and release workflows.
 - Pull request template and security policy.
-- Antigravity project rules (`GEMINI.md`) and development skill (`elsevier-mcp-dev`).
-- Support for explicit Scopus field code queries (`AUTH`, `TITLE`, `DOI`, `AFFIL`, etc.) in `search_papers`.
 
 ### Changed
 - Modernized package metadata with `pyproject.toml`.
