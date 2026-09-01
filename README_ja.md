@@ -195,6 +195,7 @@ export ELSEVIER_API_KEY="your_api_key_here"
 |---------|------|-----------|
 | `search_papers` | 論文検索（キーワードまたは `AUTH`, `TITLE`, `AFFIL`, `DOI` フィールド指定） | `query`, `count`, `year` |
 | `get_paper_abstract` | 論文抄録取得 | `eid` または `doi` |
+| `get_journal_metrics` | ジャーナル評価指標取得（CiteScore、SJR、SNIP、Q1-Q4クォータイル、OA区分） | `title` または `issn` |
 | `get_author_info` | 著者情報取得 | `author_id` |
 | `analyze_research_trends` | 研究トレンド分析 | `field`, `years` |
 | `get_institution_papers` | 機関別論文統計 | `institution`, `year` |
@@ -215,6 +216,7 @@ export ELSEVIER_API_KEY="your_api_key_here"
 | `elsevier://docs/scopus-search-syntax` | 静的 | Scopus検索クエリ構文、フィールドコード、論理演算子チートシート |
 | `elsevier://paper/{eid}` | 動的 | 指定されたEIDの論文抄録とメタデータをMarkdown形式で提供 |
 | `elsevier://trends/{field}` | 動的 | 指定された分野の年別論文出版推移と成長率をMarkdown形式で提供 |
+| `elsevier://journal/{query}` | 動的 | ジャーナルのCiteScore、SJR、SNIP、クォータイル評価レポートをMarkdown形式で提供 |
 
 ## 🧪 テスト
 

@@ -46,7 +46,8 @@ class ElsevierAPITester:
             'abstract': 'https://api.elsevier.com/content/abstract',
             'fulltext': 'https://api.elsevier.com/content/article',
             'author_lookup': 'https://api.elsevier.com/content/author',
-            'author_metrics': 'https://api.elsevier.com/analytics/scival/author'
+            'author_metrics': 'https://api.elsevier.com/analytics/scival/author',
+            'serial_title': 'https://api.elsevier.com/content/serial/title'
         }
 
     def get_headers(self, include_inst_token: bool = False) -> Dict[str, str]:
@@ -325,6 +326,46 @@ class ElsevierAPITester:
             print(f"❌ エラー: {str(e)}")
             return False
 
+    def test_journal_metrics(self) -> bool:
+        """Serial Title / Journal Metrics APIテスト"""
+        print("\n📊 Scopus Journal Metrics API テスト")
+        print("-" * 40)
+
+        try:
+            url = self.base_urls['serial_title']
+            params = {
+                'title': 'Machine Learning',
+                'view': 'CITESCORE',
+                'count': 1
+            }
+
+            response = requests.get(url, headers=self.get_headers(), params=params)
+            print(f"URL: {response.url}")
+            print(f"Status: {response.status_code}")
+
+            if response.status_code == 200:
+                data = response.json()
+                entries = data.get('serial-metadata-response', {}).get('entry', [])
+                if entries:
+                    entry = entries[0]
+                    title = entry.get('dc:title', '不明')
+                    citescore = entry.get('citeScoreYearInfoList', {}).get('citeScoreCurrentMetric', 'N/A')
+                    print(f"✅ 成功: ジャーナル情報を取得")
+                    print(f"📰 タイトル: {title}")
+                    print(f"📈 CiteScore: {citescore}")
+                    return True
+                else:
+                    print("❌ 失敗: ジャーナルが見つかりませんでした")
+                    return False
+            else:
+                print(f"❌ 失敗: HTTP {response.status_code}")
+                print(f"エラー内容: {response.text[:200]}")
+                return False
+
+        except Exception as e:
+            print(f"❌ エラー: {str(e)}")
+            return False
+
     def run_all_tests(self):
         """すべてのテストを実行"""
         print("🚀 Elsevier API 完全テストスイート")
@@ -337,6 +378,7 @@ class ElsevierAPITester:
         results = {
             'Scopus Search': self.test_scopus_search(),
             'Abstract Retrieval': self.test_abstract_retrieval(),
+            'Journal Metrics': self.test_journal_metrics(),
             'ScienceDirect Full-Text': self.test_sciencedirect_fulltext(),
             'Author Lookup': self.test_author_lookup(),
             'ORCID Search': self.test_author_by_orcid(),

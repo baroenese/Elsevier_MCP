@@ -145,6 +145,23 @@ class ElsevierMCPServer:
                     },
                     "required": ["field"]
                 }
+            },
+            "get_journal_metrics": {
+                "name": "get_journal_metrics",
+                "description": "Scopus収録ジャーナルの評価指標（CiteScore、SJR、SNIP、Q1-Q4クォータイル、オープンアクセス区分）を取得します。雑誌名またはISSNで検索可能。",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "学術誌・ジャーナル名（例: 'Nature', 'Machine Learning', 'IEEE Access'）"
+                        },
+                        "issn": {
+                            "type": "string",
+                            "description": "ジャーナルのISSNまたはE-ISSN（例: '0885-6125', '0028-0836'）"
+                        }
+                    }
+                }
             }
         }
 
@@ -411,6 +428,121 @@ class ElsevierMCPServer:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    async def get_journal_metrics(self, arguments: dict) -> dict:
+        """学術雑誌・ジャーナル評価指標取得 (CiteScore, SJR, SNIP, Q1-Q4)"""
+        title = arguments.get("title", "").strip()
+        issn = arguments.get("issn", "").strip()
+
+        if not title and not issn:
+            return {"success": False, "error": "title または issn のいずれかが必要です"}
+
+        url = f"{BASE_URL}/content/serial/title"
+        params = {"view": "CITESCORE", "count": 1}
+        if issn:
+            params["issn"] = issn
+        elif title:
+            params["title"] = title
+
+        try:
+            response = requests.get(url, headers=get_headers(), params=params, timeout=15)
+            if response.ok:
+                data = response.json()
+                entries = data.get("serial-metadata-response", {}).get("entry", [])
+                if not entries:
+                    return {"success": False, "error": f"Journal not found for query (title='{title}', issn='{issn}')"}
+
+                entry = entries[0]
+
+                # CiteScore extraction
+                citescore_info = entry.get("citeScoreYearInfoList", {}) or {}
+                citescore_current = citescore_info.get("citeScoreCurrentMetric")
+                citescore_current_year = citescore_info.get("citeScoreCurrentMetricYear")
+                citescore_tracker = citescore_info.get("citeScoreTracker")
+                citescore_tracker_year = citescore_info.get("citeScoreTrackerYear")
+
+                # SJR and SNIP extraction
+                sjr_list = entry.get("SJRList", {}).get("SJR", []) if isinstance(entry.get("SJRList"), dict) else []
+                sjr_val = sjr_list[0].get("$") if sjr_list and isinstance(sjr_list, list) and isinstance(sjr_list[0], dict) else None
+                sjr_year = sjr_list[0].get("@year") if sjr_list and isinstance(sjr_list, list) and isinstance(sjr_list[0], dict) else None
+
+                snip_list = entry.get("SNIPList", {}).get("SNIP", []) if isinstance(entry.get("SNIPList"), dict) else []
+                snip_val = snip_list[0].get("$") if snip_list and isinstance(snip_list, list) and isinstance(snip_list[0], dict) else None
+                snip_year = snip_list[0].get("@year") if snip_list and isinstance(snip_list, list) and isinstance(snip_list[0], dict) else None
+
+                # Subject Area Rankings & Quartile computation
+                subject_rankings = []
+                best_quartile = None
+
+                # Look into latest citeScoreYearInfo for ranking percentiles
+                year_info_list = citescore_info.get("citeScoreYearInfo", [])
+                if isinstance(year_info_list, list) and year_info_list:
+                    latest_year_data = next((y for y in year_info_list if y.get("@status") == "Complete"), year_info_list[0])
+                    info_list = latest_year_data.get("citeScoreInformationList", [])
+                    if isinstance(info_list, list) and info_list:
+                        score_info = info_list[0].get("citeScoreInfo", [])
+                        if isinstance(score_info, list) and score_info:
+                            ranks = score_info[0].get("citeScoreSubjectRank", [])
+                            if isinstance(ranks, list):
+                                for r in ranks:
+                                    if isinstance(r, dict):
+                                        perc_str = r.get("percentile", "0")
+                                        try:
+                                            perc = float(perc_str)
+                                        except ValueError:
+                                            perc = 0.0
+
+                                        # Quartile assignment
+                                        if perc >= 75:
+                                            q = "Q1"
+                                        elif perc >= 50:
+                                            q = "Q2"
+                                        elif perc >= 25:
+                                            q = "Q3"
+                                        else:
+                                            q = "Q4"
+
+                                        if best_quartile is None or q < best_quartile:
+                                            best_quartile = q
+
+                                        subject_rankings.append({
+                                            "subject_code": r.get("subjectCode"),
+                                            "rank": int(r.get("rank", 0)) if str(r.get("rank", "")).isdigit() else r.get("rank"),
+                                            "percentile": perc,
+                                            "quartile": q
+                                        })
+
+                result = {
+                    "title": entry.get("dc:title", "Unknown Title"),
+                    "publisher": entry.get("dc:publisher", "Unknown Publisher"),
+                    "issn": entry.get("prism:issn", ""),
+                    "eissn": entry.get("prism:eIssn", ""),
+                    "aggregation_type": entry.get("prism:aggregationType", "Journal"),
+                    "open_access": entry.get("openaccess") == "1",
+                    "citescore": {
+                        "current": float(citescore_current) if citescore_current else None,
+                        "year": citescore_current_year,
+                        "tracker": float(citescore_tracker) if citescore_tracker else None,
+                        "tracker_year": citescore_tracker_year
+                    },
+                    "sjr": {
+                        "value": float(sjr_val) if sjr_val else None,
+                        "year": sjr_year
+                    },
+                    "snip": {
+                        "value": float(snip_val) if snip_val else None,
+                        "year": snip_year
+                    },
+                    "best_quartile": best_quartile,
+                    "subject_rankings": subject_rankings
+                }
+
+                return {"success": True, "journal": result}
+            else:
+                return {"success": False, "error": f"API Error {response.status_code}: {response.text[:200]}"}
+
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def _define_prompts(self) -> dict:
         """Prompt definitions compliant with MCP specification."""
         return {
@@ -591,6 +723,12 @@ class ElsevierMCPServer:
                 "name": "Research Field Publication Trends",
                 "description": "Dynamic resource providing multi-year publication volume and growth statistics for a research field.",
                 "mimeType": "text/markdown"
+            },
+            {
+                "uriTemplate": "elsevier://journal/{query}",
+                "name": "Scopus Journal Metrics & Impact Report",
+                "description": "Dynamic resource providing CiteScore, SJR, SNIP, and Quartiles (Q1-Q4) for a journal title or ISSN.",
+                "mimeType": "text/markdown"
             }
         ]
 
@@ -701,6 +839,56 @@ class ElsevierMCPServer:
                 return {
                     "contents": [
                         {"uri": uri, "mimeType": "text/markdown", "text": f"# Error\n\nFailed to analyze trends for `{field}`: {error_msg}"}
+                    ]
+                }
+
+        elif uri.startswith("elsevier://journal/"):
+            query = uri[len("elsevier://journal/"):].strip()
+            if any(c.isdigit() for c in query) and ("-" in query or len(query) == 8):
+                res = await self.get_journal_metrics({"issn": query})
+            else:
+                res = await self.get_journal_metrics({"title": query})
+
+            if res.get("success") and "journal" in res:
+                j = res["journal"]
+                cs = j.get("citescore", {})
+                sjr = j.get("sjr", {})
+                snip = j.get("snip", {})
+                oa_badge = "✅ Open Access" if j.get("open_access") else "🔒 Subscription / Hybrid"
+
+                rank_rows = "\n".join([
+                    f"| {r.get('subject_code')} | Rank {r.get('rank')} | {r.get('percentile')}% | **{r.get('quartile')}** |"
+                    for r in j.get("subject_rankings", [])
+                ]) or "| N/A | N/A | N/A | N/A |"
+
+                text = (
+                    f"# {j.get('title', 'Journal Metrics')}\n\n"
+                    f"- **Publisher**: {j.get('publisher', 'Unknown')}\n"
+                    f"- **ISSN**: {j.get('issn') or 'N/A'} | **E-ISSN**: {j.get('eissn') or 'N/A'}\n"
+                    f"- **Best Quartile**: **{j.get('best_quartile') or 'N/A'}**\n"
+                    f"- **Access Type**: {oa_badge}\n\n"
+                    f"## 📊 Citation & Impact Metrics\n\n"
+                    f"| Metric | Value | Year |\n"
+                    f"| :--- | :--- | :--- |\n"
+                    f"| **CiteScore (Current)** | {cs.get('current') or 'N/A'} | {cs.get('year') or 'N/A'} |\n"
+                    f"| **CiteScore (Tracker)** | {cs.get('tracker') or 'N/A'} | {cs.get('tracker_year') or 'N/A'} |\n"
+                    f"| **SCImago Journal Rank (SJR)** | {sjr.get('value') or 'N/A'} | {sjr.get('year') or 'N/A'} |\n"
+                    f"| **Source Normalized Impact (SNIP)** | {snip.get('value') or 'N/A'} | {snip.get('year') or 'N/A'} |\n\n"
+                    f"## 🏆 Subject Category Rankings & Quartiles\n\n"
+                    f"| Subject Code | Rank | Percentile | Quartile |\n"
+                    f"| :--- | :--- | :--- | :--- |\n"
+                    f"{rank_rows}\n"
+                )
+                return {
+                    "contents": [
+                        {"uri": uri, "mimeType": "text/markdown", "text": text}
+                    ]
+                }
+            else:
+                error_msg = res.get("error", "Journal not found")
+                return {
+                    "contents": [
+                        {"uri": uri, "mimeType": "text/markdown", "text": f"# Error\n\nFailed to fetch journal metrics for `{query}`: {error_msg}"}
                     ]
                 }
 

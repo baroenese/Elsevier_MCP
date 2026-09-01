@@ -80,6 +80,7 @@ echo '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | python elsev
 
 # 3. Call a tool
 echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_papers","arguments":{"query":"artificial intelligence","count":2}}}' | python elsevier_mcp_complete.py
+echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_journal_metrics","arguments":{"title":"Machine Learning"}}}' | python elsevier_mcp_complete.py
 
 # 4. List prompts
 echo '{"jsonrpc":"2.0","id":4,"method":"prompts/list","params":{}}' | python elsevier_mcp_complete.py
@@ -93,4 +94,5 @@ echo '{"jsonrpc":"2.0","id":7,"method":"resources/templates/list","params":{}}' 
 
 # 7. Read a resource
 echo '{"jsonrpc":"2.0","id":8,"method":"resources/read","params":{"uri":"elsevier://docs/scopus-search-syntax"}}' | python elsevier_mcp_complete.py
+echo '{"jsonrpc":"2.0","id":9,"method":"resources/read","params":{"uri":"elsevier://journal/Nature"}}' | python elsevier_mcp_complete.py
 ```

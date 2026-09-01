@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-09-02
 
 ### Added
+- `get_journal_metrics` tool for querying Scopus journal evaluation metrics (CiteScore, SJR, SNIP, Open Access status, and computed Q1-Q4 Quartiles).
 - MCP Prompts protocol support (`prompts/list`, `prompts/get`) with built-in templates:
   - `systematic_literature_review`: Multi-paper synthesis, methodology comparison tables, and research gap discovery.
   - `paper_deep_dive`: Critical appraisal, methodology breakdown, and threats to validity.
@@ -18,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `elsevier://docs/scopus-search-syntax`: Complete Scopus query syntax reference and boolean operator guide.
   - `elsevier://paper/{eid}`: Dynamic resource rendering paper abstract and bibliographic metadata in Markdown.
   - `elsevier://trends/{field}`: Dynamic resource rendering annual publication volume and growth rates in Markdown.
+  - `elsevier://journal/{query}`: Dynamic resource rendering journal CiteScore, SJR, SNIP, and Quartiles in Markdown.
 - Support for explicit Scopus field code queries (`AUTH`, `TITLE`, `DOI`, `AFFIL`, etc.) in `search_papers` without nested wrapping.
 - Antigravity project rules (`GEMINI.md`) and development skill (`elsevier-mcp-dev`).
 - GitHub Actions CI and release workflows.
