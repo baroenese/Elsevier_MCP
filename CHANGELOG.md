@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-09-02
+## [1.2.0] - 2026-09-22
+
+### Added
+- Modular `elsevier_mcp` package structure separating concerns into `client`, `schemas`, `handlers`, `prompts`, `resources`, `server`, and `rate_limiter`.
+- Asynchronous HTTP client using `httpx.AsyncClient` with connection pooling.
+- Token bucket rate limiter (`TokenBucketRateLimiter`) with configurable rate via `ELSEVIER_RATE_LIMIT` environment variable (default: 6 req/s).
+- Exponential backoff retry with jitter on HTTP 429 (rate limited) and 5xx (server error) responses, respecting `Retry-After` headers.
+- Pydantic input models for all 7 MCP tools (`SearchPapersInput`, `GetPaperAbstractInput`, `GetAuthorInfoInput`, `AnalyzeResearchTrendsInput`, `GetInstitutionPapersInput`, `SearchOpenAccessPapersInput`, `GetJournalMetricsInput`).
+- Configurable structured logging via standard library `logging` directed to stderr (`ELSEVIER_LOG_LEVEL` environment variable).
+- Configurable HTTP timeout via `ELSEVIER_TIMEOUT` environment variable.
+- Comprehensive pytest test suite under `tests/` utilizing `pytest-asyncio` and `respx` for mock HTTP routing (40 automated tests).
+- Development extras `[project.optional-dependencies] dev` in `pyproject.toml`.
+
+### Changed
+- Converted `elsevier_mcp_complete.py` into a lightweight backward-compatibility shim that delegates to `elsevier_mcp`.
+- Updated PyPI package entry point to `elsevier_mcp.server:main`.
+- Dynamic current year calculation in `search_open_access_papers`, eliminating hardcoded publication year.
 
 ### Added
 - `get_journal_metrics` tool for querying Scopus journal evaluation metrics (CiteScore, SJR, SNIP, Open Access status, and computed Q1-Q4 Quartiles).

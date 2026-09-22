@@ -12,7 +12,7 @@ import json
 import os
 from typing import Any
 
-from elsevier_mcp_complete import ElsevierMCPServer
+from elsevier_mcp import ElsevierMCPServer
 
 
 async def show(name: str, result: dict[str, Any]) -> None:
@@ -42,6 +42,10 @@ async def main() -> int:
     await show(
         "search_open_access_papers",
         await server.search_open_access_papers({"field": "quantum computing", "count": 3}),
+    )
+    await show(
+        "get_journal_metrics",
+        await server.get_journal_metrics({"title": "Nature Machine Intelligence"}),
     )
 
     return 0

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "elsevier-mcp-server"
-version = "1.1.0"
+version = "1.2.0"
 description = "MCP server for Elsevier academic APIs including Scopus, SciVal, and Abstract Retrieval."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ license = "MIT"
 authors = [{ name = "Yasufumi Nakata" }]
 keywords = ["elsevier", "scopus", "scival", "academic", "research", "mcp"]
 dependencies = [
-  "requests>=2.31.0",
+  "httpx>=0.27.0",
   "mcp>=1.0.0",
   "pydantic>=2.0.0",
   "typing-extensions>=4.0.0",
@@ -30,8 +30,16 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.24.0",
+  "respx>=0.22.0",
+  "ruff>=0.4.0",
+]
+
 [project.scripts]
-elsevier-mcp-server = "elsevier_mcp_complete:main"
+elsevier-mcp-server = "elsevier_mcp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/yasufumi-nakata/Elsevier_MCP"
@@ -40,7 +48,12 @@ Issues = "https://github.com/yasufumi-nakata/Elsevier_MCP/issues"
 "Elsevier Developer" = "https://dev.elsevier.com/"
 
 [tool.setuptools]
+packages = ["elsevier_mcp"]
 py-modules = ["elsevier_mcp_complete"]
 
 [tool.ruff]
 line-length = 120
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

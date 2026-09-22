@@ -102,6 +102,16 @@ $env:ELSEVIER_API_KEY="your_api_key_here"
 export ELSEVIER_API_KEY="your_api_key_here"
 ```
 
+#### Optional Environment Variables
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `ELSEVIER_API_KEY` | *(Required)* | Your Elsevier Developer API key |
+| `ELSEVIER_INSTTOKEN` | *(None)* | Institutional token for subscribed full-text / metric access |
+| `ELSEVIER_RATE_LIMIT` | `6.0` | Maximum requests per second (token bucket rate limiter) |
+| `ELSEVIER_TIMEOUT` | `15.0` | HTTP request timeout duration in seconds |
+| `ELSEVIER_LOG_LEVEL` | `INFO` | Server logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+
 ### Step 4: Configure MCP in Cursor IDE
 
 #### 4-1. Open Cursor Settings
@@ -351,9 +361,32 @@ Pull requests and issue reports are welcome!
 - [MCP Directory](https://cursor.directory/mcp) - Directory of 1800+ MCP servers
 - [GitHub - MCP Servers](https://github.com/modelcontextprotocol/servers) - Official MCP server collection
 
-### 🎓 Learning Resources
-- [MCP Tutorial Series](https://medium.com/search?q=model+context+protocol) - MCP learning articles
-- [Elsevier API Examples](https://dev.elsevier.com/start_coding.html) - API usage examples
+## 🛠️ Development & Testing
+
+### Setting Up Development Environment
+
+```bash
+# Clone the repository
+git clone https://github.com/yasufumi-nakata/Elsevier_MCP.git
+cd Elsevier_MCP
+
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install package in editable mode with development dependencies
+pip install -e ".[dev]"
+```
+
+### Running Tests
+
+```bash
+# Run the offline test suite (mocked via respx, no API key required)
+pytest tests/ -v
+
+# Run live API tests (requires ELSEVIER_API_KEY environment variable)
+python test.py
+```
 
 ## 📞 Support & Contact
 
