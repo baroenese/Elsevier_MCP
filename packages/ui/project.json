@@ -3,10 +3,18 @@
   "projectType": "library",
   "sourceRoot": "packages/ui/src",
   "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx tsc --noEmit -p packages/ui/tsconfig.json",
+        "cwd": "."
+      }
+    },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "echo 'UI lint placeholder'"
+        "command": "npx tsc --noEmit -p packages/ui/tsconfig.json",
+        "cwd": "."
       }
     }
   }
