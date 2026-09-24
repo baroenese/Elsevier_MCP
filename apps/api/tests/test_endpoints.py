@@ -1,5 +1,6 @@
 """Comprehensive endpoint test suite for FastAPI backend routes."""
 
+from pathlib import Path
 from typing import Any
 import pytest
 import httpx
@@ -101,6 +102,18 @@ def mock_handlers() -> MockToolHandlers:
     app.dependency_overrides[get_handlers] = lambda: handlers
     yield handlers
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def isolated_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Ensure test runs never read from or modify the user's real ~/.elsevier-mcp/config.json."""
+    fake_config_dir = tmp_path / ".elsevier-mcp"
+    fake_config_file = fake_config_dir / "config.json"
+    monkeypatch.setattr("app.routers.health.CONFIG_DIR", fake_config_dir)
+    monkeypatch.setattr("app.routers.health.CONFIG_FILE", fake_config_file)
+    monkeypatch.setattr("app.config.CONFIG_DIR", fake_config_dir)
+    monkeypatch.setattr("app.config.CONFIG_FILE", fake_config_file)
+    yield
 
 
 @pytest.fixture
