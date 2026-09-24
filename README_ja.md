@@ -398,10 +398,18 @@ npm install
 ### テストおよびビルドの実行
 
 ```bash
-# Nx経由でテストを実行
-npx nx test elsevier-mcp   # Python MCPサーバーテスト（41件、respxモック）
-npx nx test api            # FastAPIバックエンドルートテスト
-npx nx build web           # Next.js 16 プロダクションビルド
+# モノレポ全体のテストを一括実行（elsevier-mcp, api, web, ui）
+npx nx run-many -t test
+
+# プロジェクトごとに個別実行
+npx nx test elsevier-mcp   # Python MCPサーバーテスト（42件、respxモック）
+npx nx test api            # FastAPIバックエンドエンドポイントテスト（19件）
+npx nx test web            # Next.js 16 フロントエンドテスト（Node 24 test runner + tsc）
+npx nx test ui             # 共通UIコンポーネント型検査
+
+# プロダクションビルドとリント
+npx nx build web           # Next.js 16 プロダクションビルド（Turbopack）
+npx nx run-many -t lint    # 全4プロジェクトのリント
 
 # 直接pytestを実行
 pytest packages/elsevier-mcp/tests/ -v

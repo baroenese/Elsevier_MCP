@@ -398,10 +398,18 @@ npm install
 ### Running Tests & Builds
 
 ```bash
-# Run tests via Nx
-npx nx test elsevier-mcp   # Python MCP server tests (41 tests, respx mocks)
-npx nx test api            # FastAPI backend route tests
-npx nx build web           # Next.js 16 production build
+# Run all tests across the monorepo (elsevier-mcp, api, web, ui)
+npx nx run-many -t test
+
+# Run tests individually per project
+npx nx test elsevier-mcp   # Python MCP server tests (42 tests, respx mocks)
+npx nx test api            # FastAPI backend endpoint tests (19 tests)
+npx nx test web            # Next.js 16 frontend tests (Node 24 test runner + tsc)
+npx nx test ui             # Shared UI component type tests
+
+# Production build and lint
+npx nx build web           # Next.js 16 production build (Turbopack)
+npx nx run-many -t lint    # Lint all 4 projects
 
 # Direct pytest
 pytest packages/elsevier-mcp/tests/ -v

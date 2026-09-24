@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apps/api`: Modular FastAPI backend service exposing REST endpoints for Scopus search, abstracts, trends, and journal metrics.
   - `apps/web`: Next.js 16 (App Router + Turbopack + Tailwind CSS v4) frontend with BFF Route Handlers proxying to FastAPI.
 - Configured Nx task targets for testing, linting, building, and serving across Python and TypeScript projects.
+- Comprehensive automated test suite with unified `npx nx run-many -t test` spanning 68 tests across all 4 packages.
+- Frontend unit test suite in `apps/web/tests/` running on Node 24 native test runner (`node:test`).
+
+### Fixed
+- Fixed author metadata parsing in `get_paper_abstract` and `parse_paper_entry` to correctly handle nested Scopus dictionary and array structures (`_parse_author_names`), preventing React object rendering exceptions.
+- Added comprehensive edge-case unit tests for `_parse_author_names`.
 
 ## [1.2.0] - 2026-09-22
 
