@@ -13,30 +13,34 @@ title: AGENTS.md — Elsevier MCP Server Instructions
 
 MCP server exposing Elsevier academic APIs (Scopus search, SciVal journal metrics, Abstract Retrieval) over JSON-RPC 2.0 stdio. Published as the `elsevier-mcp-server` PyPI package (Python 3.10+, MIT).
 
-## Layout — package architecture
+## Layout — Nx monorepo architecture
 
-- `elsevier_mcp/` — core package:
-  - `client.py` — `ElsevierAPIClient` with async `httpx`, retry logic, rate limiting, and `get_headers()`.
-  - `rate_limiter.py` — `TokenBucketRateLimiter` managing request throttling.
-  - `schemas.py` — Pydantic input models for validation.
-  - `handlers.py` — `ToolHandlers` class with tool definitions and query execution.
-  - `prompts.py` — MCP prompt definitions and message generator.
-  - `resources.py` — static/dynamic MCP resource definitions and readers.
-  - `server.py` — `ElsevierMCPServer`, JSON-RPC 2.0 dispatch, stdio event loop, and CLI entry point.
-- `elsevier_mcp_complete.py` — backward-compatibility shim re-exporting server components with DeprecationWarning.
-- `tests/` — pytest suite with `respx` mock HTTP routing (unit and integration tests).
-- `test.py` — live API integration test script (needs `ELSEVIER_API_KEY` set).
-- `examples/basic_usage.py` — client example.
+- `packages/elsevier-mcp/` — core Python MCP package:
+  - `elsevier_mcp/` — `client.py`, `rate_limiter.py`, `schemas.py`, `handlers.py`, `prompts.py`, `resources.py`, `server.py`
+  - `elsevier_mcp_complete.py` — backward-compatibility shim
+  - `tests/` — pytest suite (mocked via respx)
+  - `test.py` — live API integration test script (needs `ELSEVIER_API_KEY` set)
+  - `pyproject.toml`, `setup.py`, `project.json`
+- `apps/api/` — FastAPI backend service exposing REST endpoints (`health`, `search`, `abstract`, `trends`, `journals`).
+- `apps/web/` — Next.js 16 Web UI (App Router, Tailwind CSS v4, BFF Route Handlers).
+- `packages/ui/` — shared `@elsevier-mcp/ui` React components (`MetricTile`, `QuartileBadge`, etc.).
+- `nx.json`, `package.json`, `tsconfig.base.json` — Nx monorepo configuration.
 - `README.md` / `README_ja.md` (Japanese), `CHANGELOG.md` — must be updated together when tools or CLI behavior change.
 - `.agents/skills/elsevier-mcp-dev/SKILL.md` — detailed runbook for adding tools and testing JSON-RPC over stdio.
 
 ## Verification commands
 
 ```bash
-python -m compileall -q elsevier_mcp tests elsevier_mcp_complete.py  # syntax check
-pytest tests/ -v                                                     # offline unit test suite (mocked via respx)
-python test.py                                                       # live endpoint tests, requires ELSEVIER_API_KEY
-python -m build --no-isolation && python -m twine check dist/*       # packaging check
+# Nx monorepo verification
+npx nx test elsevier-mcp                                             # 41 Python unit tests (respx mocked)
+npx nx test api                                                      # FastAPI route registration tests
+npx nx build web                                                     # Next.js 16 production build
+npx nx lint api && npx nx lint elsevier-mcp                          # Python syntax check
+
+# Direct Python commands
+pytest packages/elsevier-mcp/tests/ -v
+pytest apps/api/tests/ -v
+python packages/elsevier-mcp/test.py                                 # live endpoint tests, requires ELSEVIER_API_KEY
 ```
 
 ## Conventions and gotchas

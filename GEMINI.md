@@ -20,15 +20,15 @@
 
 ## 3. Verification & Quality Assurance Checklist
 Before committing or finalizing changes:
-1. **Syntax & Compilation**:
-   `python -m compileall -q elsevier_mcp tests elsevier_mcp_complete.py examples`
-2. **Automated Unit & Integration Testing**:
-   `pytest tests/ -v`
-3. **Live API Testing**:
-   `python test.py` (when `ELSEVIER_API_KEY` is configured)
-4. **Package Build & Distribution Checks**:
-   `python -m build`
-   `python -m twine check dist/*`
-4. **Documentation & Changelog**:
+1. **Automated Unit & Integration Testing**:
+   `npx nx test elsevier-mcp` (or `pytest packages/elsevier-mcp/tests/ -v`)
+   `npx nx test api` (or `pytest apps/api/tests/ -v`)
+2. **Frontend Production Build**:
+   `npx nx build web`
+3. **Syntax & Compilation**:
+   `npx nx lint api && npx nx lint elsevier-mcp`
+4. **Live API Testing**:
+   `python packages/elsevier-mcp/test.py` (when `ELSEVIER_API_KEY` is configured)
+5. **Documentation & Changelog**:
    Update `CHANGELOG.md`, `README.md`, or `README_ja.md` if tool definitions or CLI behaviors change.
-5. **Git Commits**: Use Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
+6. **Git Commits**: Use Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).

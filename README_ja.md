@@ -67,8 +67,23 @@ ElsevierのScopus APIを活用したMCP (Model Context Protocol) サーバーで
 git clone https://github.com/yasufumi-nakata/Elsevier_MCP.git
 cd Elsevier_MCP
 
-# 必要なPythonライブラリをインストール
-pip install -e .
+# 必要なPython MCPパッケージをインストール
+pip install -e packages/elsevier-mcp
+
+# (オプション) Web UIおよびFastAPIバックエンド用の依存関係をインストール
+npm install
+```
+
+### 🌐 Next.js 16 Web UI (オプション)
+
+本リポジトリには、Next.js 16 (App Router + Turbopack) と FastAPI によるフルスタックWeb UIが含まれています:
+
+```bash
+# FastAPIバックエンドを起動 (http://localhost:8000)
+npm run dev:api
+
+# Next.jsフロントエンドを起動 (http://localhost:3000)
+npm run dev:web
 ```
 
 ### ステップ3: Elsevier API Keyを取得
@@ -375,17 +390,25 @@ python3 -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
 # 開発用依存関係を含めて編集可能モードでインストール
-pip install -e ".[dev]"
+pip install -e "packages/elsevier-mcp[dev]"
+pip install -r apps/api/requirements.txt
+npm install
 ```
 
-### テストの実行
+### テストおよびビルドの実行
 
 ```bash
-# オフライン単体テストの実行（respxによるモック、APIキー不要）
-pytest tests/ -v
+# Nx経由でテストを実行
+npx nx test elsevier-mcp   # Python MCPサーバーテスト（41件、respxモック）
+npx nx test api            # FastAPIバックエンドルートテスト
+npx nx build web           # Next.js 16 プロダクションビルド
+
+# 直接pytestを実行
+pytest packages/elsevier-mcp/tests/ -v
+pytest apps/api/tests/ -v
 
 # ライブAPIテストの実行（ELSEVIER_API_KEY環境変数が必要）
-python test.py
+python packages/elsevier-mcp/test.py
 ```
 
 ## 📞 サポート・お問い合わせ

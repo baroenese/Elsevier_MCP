@@ -67,8 +67,23 @@ You need the following environment:
 git clone https://github.com/yasufumi-nakata/Elsevier_MCP.git
 cd Elsevier_MCP
 
-# Install required Python libraries
-pip install -e .
+# Install required Python MCP package
+pip install -e packages/elsevier-mcp
+
+# (Optional) Install full-stack dependencies for the Web UI & FastAPI backend
+npm install
+```
+
+### 🌐 Next.js 16 Web UI (Optional)
+
+This repository includes a full-stack Web UI powered by Next.js 16 (App Router + Turbopack) and FastAPI:
+
+```bash
+# Start FastAPI backend (http://localhost:8000)
+npm run dev:api
+
+# Start Next.js frontend (http://localhost:3000)
+npm run dev:web
 ```
 
 ### Step 3: Obtain Elsevier API Key
@@ -374,18 +389,26 @@ cd Elsevier_MCP
 python3 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install package in editable mode with development dependencies
-pip install -e ".[dev]"
+# Install packages in editable mode with development dependencies
+pip install -e "packages/elsevier-mcp[dev]"
+pip install -r apps/api/requirements.txt
+npm install
 ```
 
-### Running Tests
+### Running Tests & Builds
 
 ```bash
-# Run the offline test suite (mocked via respx, no API key required)
-pytest tests/ -v
+# Run tests via Nx
+npx nx test elsevier-mcp   # Python MCP server tests (41 tests, respx mocks)
+npx nx test api            # FastAPI backend route tests
+npx nx build web           # Next.js 16 production build
+
+# Direct pytest
+pytest packages/elsevier-mcp/tests/ -v
+pytest apps/api/tests/ -v
 
 # Run live API tests (requires ELSEVIER_API_KEY environment variable)
-python test.py
+python packages/elsevier-mcp/test.py
 ```
 
 ## 📞 Support & Contact
