@@ -76,9 +76,32 @@ export default function SearchPage() {
         });
       } else {
         const p = data.paper;
+        let authorsStr = 'Unknown';
+        const rawAuthors: unknown = p.authors;
+        if (typeof rawAuthors === 'string') {
+          authorsStr = rawAuthors;
+        } else if (Array.isArray(rawAuthors)) {
+          authorsStr = (rawAuthors as unknown[]).join(', ');
+        } else if (typeof rawAuthors === 'object' && rawAuthors !== null) {
+          const authObj = rawAuthors as Record<string, unknown>;
+          if (Array.isArray(authObj.author)) {
+            authorsStr = authObj.author
+              .map((a: Record<string, unknown>) => {
+                const pref = a['preferred-name'] as Record<string, unknown> | undefined;
+                return (
+                  pref?.['ce:indexed-name'] ||
+                  a['ce:indexed-name'] ||
+                  `${a['ce:surname'] ?? ''} ${a['ce:given-name'] ?? ''}`.trim() ||
+                  'Unknown'
+                );
+              })
+              .join(', ');
+          }
+        }
+
         setAbstractData({
           title: p.title,
-          authors: p.authors,
+          authors: authorsStr,
           journal: p.journal,
           year: String(p.year ?? '').slice(0, 4),
           citations: String(p.citations ?? 0),

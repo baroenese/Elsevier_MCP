@@ -74,6 +74,45 @@ def build_scopus_query(
     return " AND ".join(parts)
 
 
+def _parse_author_names(creator_data: Any) -> str:
+    """Normalize author creator field from Scopus entry or abstract into readable string.
+
+    Args:
+        creator_data: String, dict, or list representation of author(s).
+
+    Returns:
+        Comma-separated string of author names.
+    """
+    if not creator_data:
+        return "Unknown"
+    if isinstance(creator_data, str):
+        return creator_data
+    if isinstance(creator_data, dict):
+        authors = creator_data.get("author", [])
+        if isinstance(authors, list):
+            names: list[str] = []
+            for a in authors:
+                if isinstance(a, dict):
+                    name = (
+                        a.get("preferred-name", {}).get("ce:indexed-name")
+                        or a.get("ce:indexed-name")
+                    )
+                    if not name:
+                        surname = a.get("ce:surname", "")
+                        given = a.get("ce:given-name", "")
+                        name = f"{surname} {given}".strip()
+                    if name:
+                        names.append(name)
+                elif isinstance(a, str):
+                    names.append(a)
+            return ", ".join(names) if names else "Unknown"
+        if isinstance(authors, dict):
+            return _parse_author_names(authors)
+    if isinstance(creator_data, list):
+        return ", ".join(str(x) for x in creator_data if x)
+    return str(creator_data)
+
+
 def parse_paper_entry(entry: dict[str, Any], open_access: bool = False) -> dict[str, Any]:
     """Extract standard paper metadata from a Scopus search result entry.
 
@@ -92,7 +131,7 @@ def parse_paper_entry(entry: dict[str, Any], open_access: bool = False) -> dict[
 
     paper: dict[str, Any] = {
         "title": entry.get("dc:title", "No title"),
-        "authors": entry.get("dc:creator", "Unknown"),
+        "authors": _parse_author_names(entry.get("dc:creator")),
         "journal": entry.get("prism:publicationName", "Unknown"),
         "year": entry.get("prism:coverDate", ""),
         "citations": citations,
@@ -331,10 +370,17 @@ class ToolHandlers:
                 abstract_response = data.get("abstracts-retrieval-response", {})
                 coredata = abstract_response.get("coredata", {})
 
+                raw_abstract = coredata.get("dc:description")
+                abstract_text = (
+                    raw_abstract
+                    if raw_abstract and str(raw_abstract).strip() != "No abstract"
+                    else "Full narrative abstract is not available in basic view. Access typically requires an institutional subscription (ELSEVIER_INSTTOKEN). You can view full article details and open access full-text via the DOI link."
+                )
+
                 result = {
                     "title": coredata.get("dc:title", "No title"),
-                    "abstract": coredata.get("dc:description", "No abstract"),
-                    "authors": coredata.get("dc:creator", "Unknown"),
+                    "abstract": abstract_text,
+                    "authors": _parse_author_names(coredata.get("dc:creator")),
                     "journal": coredata.get("prism:publicationName", "Unknown"),
                     "year": coredata.get("prism:coverDate", ""),
                     "doi": coredata.get("prism:doi", ""),
