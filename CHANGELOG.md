@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Converted repository into an Nx monorepo orchestrating:
+  - `packages/elsevier-mcp`: Python MCP server library (relocated, fully preserving stdio JSON-RPC protocol).
+  - `packages/ui`: Shared React/TypeScript UI component library (@elsevier-mcp/ui).
+  - `apps/api`: Modular FastAPI backend service exposing REST endpoints for Scopus search, abstracts, trends, and journal metrics.
+  - `apps/web`: Next.js 16 (App Router + Turbopack + Tailwind CSS v4) frontend with BFF Route Handlers proxying to FastAPI.
+- Configured Nx task targets for testing, linting, building, and serving across Python and TypeScript projects.
+
 ## [1.2.0] - 2026-09-22
 
 ### Added

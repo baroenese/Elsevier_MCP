@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elsevier MCP Web UI</title>
+  <!-- Tailwind v4 browser build (vendored, compiles at runtime; local tool only, no build step). -->
+  <script src="/static/tailwind.js"></script>
+  <style type="text/tailwindcss">
+    /*
+     * Shape system: containers (cards, modal) rounded-xl 12px; controls (buttons, inputs) rounded-lg 8px;
+     * status badges pill. One accent (Elsevier orange) locked across the page; emerald/red/amber are
+     * semantic status colors only. Zero em-dashes in copy.
+     */
+    @theme {
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .card { @apply rounded-xl border border-zinc-200 bg-white shadow-sm shadow-zinc-900/[0.03] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none; }
+    .label { @apply mb-1.5 block text-[13px] font-medium text-zinc-600 dark:text-zinc-400; }
+    .input { @apply w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-500 focus:border-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-600/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-400 dark:focus:border-orange-500; }
+    .btn { @apply inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors active:scale-[0.98] disabled:cursor-wait disabled:opacity-50; }
+    .btn-primary { @apply btn bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300; }
+    .btn-secondary { @apply btn bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700; }
+    .btn-ghost { @apply btn border border-zinc-300 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100; }
+    .th { @apply px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400; }
+    .td { @apply border-t border-zinc-100 px-3 py-2.5 align-top text-[13.5px] dark:border-zinc-800; }
+    .rowlink { @apply cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50; }
+    .metric-tile { @apply rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-800/40; }
+    .metric-value { @apply text-2xl font-bold tabular-nums text-orange-700 dark:text-orange-400; }
+    .metric-label { @apply mt-1 text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400; }
+    .qtag { @apply inline-block rounded-full px-2.5 py-0.5 text-xs font-bold; }
+    .status { @apply text-[13px] text-zinc-500 dark:text-zinc-400; }
+    .status-error { @apply text-red-600 dark:text-red-400; }
+    .link { @apply text-orange-700 hover:underline dark:text-orange-400; }
+    .chip { @apply inline-flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-1 text-[13px] text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300; }
+    .hint { @apply text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400; }
+    .code { @apply rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[12px] text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300; }
+    .skeleton { @apply h-4 rounded bg-zinc-200 motion-safe:animate-pulse dark:bg-zinc-800; }
+  </style>
+</head>
+<body class="min-h-[100dvh] bg-zinc-50 font-sans text-zinc-800 antialiased dark:bg-zinc-950 dark:text-zinc-200">
+
+  <header class="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-600 text-lg font-bold text-white dark:bg-orange-500">E</div>
+        <div>
+          <h1 class="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Elsevier MCP Web UI</h1>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400">Scopus search, trends, and journal metrics on top of the Elsevier MCP server</p>
+        </div>
+      </div>
+      <div id="health-badge" class="rounded-full px-3 py-1 text-xs font-medium" title="API key status">Checking...</div>
+    </div>
+  </header>
+
+  <nav class="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900" role="tablist">
+    <div class="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 sm:px-6">
+      <button class="tab border-b-2 border-transparent px-4 py-2.5 text-sm font-medium whitespace-nowrap" data-tab="search" role="tab">Search</button>
+      <button class="tab border-b-2 border-transparent px-4 py-2.5 text-sm font-medium whitespace-nowrap" data-tab="trends" role="tab">Trends</button>
+      <button class="tab border-b-2 border-transparent px-4 py-2.5 text-sm font-medium whitespace-nowrap" data-tab="journals" role="tab">Journals</button>
+      <button class="tab border-b-2 border-transparent px-4 py-2.5 text-sm font-medium whitespace-nowrap" data-tab="settings" role="tab">Settings</button>
+    </div>
+  </nav>
+
+  <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+    <!-- ============ SEARCH ============ -->
+    <section id="tab-search" class="panel space-y-4">
+      <form id="search-form" class="card p-5">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label class="sm:col-span-2">
+            <span class="label">Query</span>
+            <input type="text" id="search-query" class="input" placeholder="machine learning for drug discovery" required>
+          </label>
+          <label>
+            <span class="label">Author (optional)</span>
+            <input type="text" id="search-author" class="input" placeholder="e.g. Hinton">
+          </label>
+          <label>
+            <span class="label">Year (optional)</span>
+            <input type="text" id="search-year" class="input" placeholder="2024" pattern="\d{4}">
+          </label>
+          <label class="flex items-center gap-2 pt-6 text-sm text-zinc-700 dark:text-zinc-300">
+            <input type="checkbox" id="search-oa" class="h-4 w-4 rounded border-zinc-300 accent-orange-600">
+            Open access only
+          </label>
+          <label>
+            <span class="label">Results</span>
+            <select id="search-count" class="input">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+            </select>
+          </label>
+          <div class="flex items-center gap-3 sm:col-span-2">
+            <button type="submit" class="btn-primary">Search Scopus</button>
+            <span id="search-status" class="status"></span>
+          </div>
+        </div>
+      </form>
+
+      <p id="search-summary" class="status"></p>
+      <div class="card overflow-x-auto">
+        <table id="search-table" class="w-full">
+          <thead>
+            <tr><th class="th w-8">#</th><th class="th">Title</th><th class="th">Authors</th><th class="th">Journal</th><th class="th w-14">Year</th><th class="th w-20 text-right">Citations</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="search-empty" class="hidden py-14 text-center">
+          <p class="text-sm font-medium text-zinc-700 dark:text-zinc-300">No results yet</p>
+          <p class="hint mt-1">Run a search above. Click any row to open its abstract.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TRENDS ============ -->
+    <section id="tab-trends" class="panel hidden space-y-4">
+      <form id="trends-form" class="card p-5">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label class="sm:col-span-2">
+            <span class="label">Research field</span>
+            <input type="text" id="trends-field" class="input" placeholder="e.g. quantum computing" required>
+          </label>
+          <label>
+            <span class="label">From year</span>
+            <input type="number" id="trends-start" class="input" value="2020" min="1970" max="2026">
+          </label>
+          <label>
+            <span class="label">To year</span>
+            <input type="number" id="trends-end" class="input" value="2024" min="1970" max="2026">
+          </label>
+          <div class="flex items-center gap-3 sm:col-span-2 lg:col-span-4">
+            <button type="submit" class="btn-primary">Analyze trends</button>
+            <span id="trends-status" class="status"></span>
+          </div>
+        </div>
+      </form>
+
+      <p id="trends-summary" class="status"></p>
+      <div class="card p-4 sm:p-5">
+        <canvas id="trends-chart" height="140" aria-label="Publications per year chart"></canvas>
+      </div>
+      <div class="card overflow-x-auto">
+        <table id="trends-table" class="w-full">
+          <thead><tr><th class="th">Year</th><th class="th text-right">Papers</th><th class="th text-right">Growth</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="trends-empty" class="hidden py-14 text-center">
+          <p class="text-sm font-medium text-zinc-700 dark:text-zinc-300">No trend data yet</p>
+          <p class="hint mt-1">Enter a research field above to plot publication counts per year.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ JOURNALS ============ -->
+    <section id="tab-journals" class="panel hidden space-y-4">
+      <form id="journal-form" class="card p-5">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label class="sm:col-span-2">
+            <span class="label">Journal title or ISSN</span>
+            <input type="text" id="journal-query" class="input" placeholder="e.g. Nature, or 0028-0836" required>
+          </label>
+          <div class="flex items-end">
+            <button type="submit" class="btn-primary w-full">Get metrics</button>
+          </div>
+          <div class="flex items-end">
+            <button type="button" id="journal-add-compare" class="btn-ghost w-full">Add to compare</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-4">
+            <button type="button" id="journal-run-compare" class="btn-secondary">Compare selected</button>
+            <span id="journal-status" class="status"></span>
+          </div>
+        </div>
+      </form>
+
+      <div id="journal-result"></div>
+
+      <div id="compare-list" class="flex flex-wrap gap-2"></div>
+      <div id="compare-result" class="grid gap-4 md:grid-cols-2"></div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section id="tab-settings" class="panel hidden space-y-4">
+      <div class="card p-5">
+        <h2 class="mb-1 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Elsevier API credentials</h2>
+        <p class="hint mb-4">
+          The key is stored locally in <code id="config-path" class="code">~/.elsevier-mcp/config.json</code>
+          with permissions 0600 and is only ever sent to api.elsevier.com.
+          An <span class="code">ELSEVIER_API_KEY</span> set in your shell takes priority over the saved one.
+        </p>
+        <form id="settings-form">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label>
+              <span class="label">API key</span>
+              <input type="password" id="cfg-api-key" class="input" placeholder="paste key to update" autocomplete="off">
+            </label>
+            <label>
+              <span class="label">Institutional token (optional)</span>
+              <input type="password" id="cfg-insttoken" class="input" placeholder="paste token to update" autocomplete="off">
+            </label>
+          </div>
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+            <button type="submit" class="btn-primary">Save credentials</button>
+            <button type="button" id="cfg-clear" class="btn-ghost">Clear saved</button>
+            <span id="settings-status" class="status"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="card p-5">
+        <h2 class="mb-3 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Status</h2>
+        <dl id="status-list" class="grid gap-x-6 gap-y-2 text-[13.5px] sm:grid-cols-[200px_1fr]"></dl>
+      </div>
+
+      <div class="card p-5">
+        <h2 class="mb-1 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Registered MCP tools</h2>
+        <p class="hint mb-3">These tools are exposed over the stdio MCP protocol for AI clients, and reused by this UI.</p>
+        <div class="overflow-x-auto">
+          <table id="tools-table" class="w-full">
+            <thead><tr><th class="th">Tool</th><th class="th">Description</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="mx-auto max-w-6xl px-4 pb-10 text-xs text-zinc-500 sm:px-6 dark:text-zinc-400">
+    The stdio MCP server (<span class="code">elsevier-mcp-server</span>) remains available for AI clients such as Cursor and Claude Desktop.
+  </footer>
+
+  <!-- Abstract modal -->
+  <div id="modal-backdrop" class="fixed inset-0 z-50 hidden overflow-y-auto bg-zinc-950/60 p-4 sm:p-8">
+    <div class="card relative mx-auto max-w-2xl p-6">
+      <button id="modal-close" class="absolute right-3 top-2 text-2xl leading-none text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200" aria-label="Close">&times;</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="/static/jquery.min.js"></script>
+  <script src="/static/chart.umd.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

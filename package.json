@@ -1,0 +1,21 @@
+{
+  "name": "@elsevier-mcp/monorepo",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "nx run-many -t dev",
+    "dev:web": "nx dev web",
+    "dev:api": "nx serve api",
+    "build": "nx run-many -t build",
+    "test": "nx run-many -t test",
+    "lint": "nx run-many -t lint",
+    "graph": "nx graph"
+  },
+  "devDependencies": {
+    "nx": "^21.6.0",
+    "@nx/next": "^21.6.0",
+    "@nx/react": "^21.6.0",
+    "@nx/eslint": "^21.6.0",
+    "typescript": "^5.7.0"
+  }
+}

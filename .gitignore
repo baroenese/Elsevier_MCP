@@ -31,3 +31,13 @@ dist/
 .opencode/skills/open-knowledge/
 .pi/skills/open-knowledge/
 .zcode/
+
+# Nx
+.nx/
+
+# Next.js
+.next/
+out/
+
+# Node
+node_modules/
