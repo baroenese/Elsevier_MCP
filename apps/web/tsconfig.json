@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
     "plugins": [{ "name": "next" }],
     "module": "esnext",
     "moduleResolution": "bundler",

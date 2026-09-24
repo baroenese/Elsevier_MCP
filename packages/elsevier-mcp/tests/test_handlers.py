@@ -5,7 +5,12 @@ import pytest
 import respx
 
 from elsevier_mcp.client import BASE_URL, ElsevierAPIClient
-from elsevier_mcp.handlers import ToolHandlers, build_scopus_query, parse_paper_entry
+from elsevier_mcp.handlers import (
+    ToolHandlers,
+    _parse_author_names,
+    build_scopus_query,
+    parse_paper_entry,
+)
 
 
 def test_build_scopus_query() -> None:
@@ -44,6 +49,48 @@ def test_parse_paper_entry() -> None:
     assert parsed["title"] == "Test Title"
     assert parsed["citations"] == 42
     assert parsed["open_access"] is True
+
+
+def test_parse_author_names() -> None:
+    """Verify author name normalization across different Scopus response formats."""
+    # String input
+    assert _parse_author_names("Alice Smith") == "Alice Smith"
+
+    # Empty or None
+    assert _parse_author_names(None) == "Unknown"
+    assert _parse_author_names("") == "Unknown"
+    assert _parse_author_names({}) == "Unknown"
+
+    # Dict with author list containing ce:indexed-name
+    scopus_abstract_authors = {
+        "author": [
+            {"ce:indexed-name": "He K.", "ce:surname": "He"},
+            {"ce:indexed-name": "Zhang X.", "ce:surname": "Zhang"},
+        ]
+    }
+    assert _parse_author_names(scopus_abstract_authors) == "He K., Zhang X."
+
+    # Preferred name precedence
+    pref_authors = {
+        "author": [
+            {
+                "preferred-name": {"ce:indexed-name": "LeCun Y."},
+                "ce:indexed-name": "Lecun Y.",
+            }
+        ]
+    }
+    assert _parse_author_names(pref_authors) == "LeCun Y."
+
+    # Fallback to surname and given-name
+    surname_only = {
+        "author": [
+            {"ce:surname": "Turing", "ce:given-name": "Alan M."},
+        ]
+    }
+    assert _parse_author_names(surname_only) == "Turing Alan M."
+
+    # List of author names
+    assert _parse_author_names(["Bengio Y.", "Hinton G."]) == "Bengio Y., Hinton G."
 
 
 @pytest.mark.asyncio
