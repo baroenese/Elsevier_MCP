@@ -414,6 +414,7 @@ npx nx test ui             # 共通UIコンポーネント型検査
 # プロダクションビルドとリント
 npx nx build web           # Next.js 16 プロダクションビルド（Turbopack）
 npx nx run-many -t lint    # 全4プロジェクトのリント
+npx nx e2e web            # Playwright e2e スモークテスト（web をビルド、`npx playwright install chromium` が必要）
 
 # 直接pytestを実行
 pytest packages/elsevier-mcp/tests/ -v

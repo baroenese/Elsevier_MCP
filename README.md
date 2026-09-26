@@ -414,6 +414,7 @@ npx nx test ui             # Shared UI component type tests
 # Production build and lint
 npx nx build web           # Next.js 16 production build (Turbopack)
 npx nx run-many -t lint    # Lint all 4 projects
+npx nx e2e web            # Playwright e2e smoke tests (builds web, needs `npx playwright install chromium`)
 
 # Direct pytest
 pytest packages/elsevier-mcp/tests/ -v

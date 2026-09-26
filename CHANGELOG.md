@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.1] - 2026-09-27
 
 ### Added
+- Playwright e2e smoke suite for `apps/web` (`nx e2e web`): every page shell, nav tabs, and form controls rendered against the production build — no backend required.
+- CI coverage gate: Python test suites fail below 90% coverage (`--cov-fail-under`).
 - pytest-cov coverage reporting in `nx test` for both Python projects (`elsevier-mcp` 92.9%, `api` 92%).
 - Ruff lint targets replacing `compileall` (`nx lint elsevier-mcp`, `nx lint api`) with pragmatic rule config.
 - ESLint flat config (`typescript-eslint` recommended) for `apps/web` and `packages/ui`; `nx lint web`/`nx lint ui` now run eslint + `tsc --noEmit`.

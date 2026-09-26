@@ -38,6 +38,7 @@ npx nx test api                                                      # FastAPI r
 npx nx build web                                                     # Next.js 16 production build
 npx nx lint api && npx nx lint elsevier-mcp                          # ruff check (Python)
 npx nx lint web && npx nx lint ui                                    # eslint + tsc --noEmit (TypeScript)
+npx nx e2e web                                                       # Playwright e2e smoke (builds web first; needs Chromium via `npx playwright install chromium`)
 
 # Direct Python commands (system python has no pytest — use the repo venv at .venv/bin/python)
 pytest packages/elsevier-mcp/tests/ -v --cov=elsevier_mcp --cov-report=term-missing
