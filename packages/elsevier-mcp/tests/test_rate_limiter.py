@@ -1,5 +1,6 @@
 """Tests for TokenBucketRateLimiter."""
 
+import asyncio
 import time
 
 import pytest
@@ -56,3 +57,25 @@ async def test_rate_limiter_waits_when_exhausted() -> None:
     duration = time.monotonic() - start
 
     assert duration >= 0.08
+
+
+@pytest.mark.asyncio
+async def test_rate_limiter_does_not_hold_lock_while_sleeping() -> None:
+    """A waiting acquirer must not block an acquirer with available tokens.
+
+    Regression test: the original implementation slept while holding the
+    lock, serializing every waiter behind the current sleeper.
+    """
+    limiter = TokenBucketRateLimiter(rate=1.0, burst=5.0)
+    for _ in range(4):
+        await limiter.acquire(1.0)  # leave exactly 1 token
+
+    big_task = asyncio.create_task(limiter.acquire(2.0))  # must wait ~1s
+    await asyncio.sleep(0.05)  # let the big acquire enter its wait
+
+    start = time.monotonic()
+    await limiter.acquire(1.0)  # token available: should be near-instant
+    b_wait = time.monotonic() - start
+    await big_task
+
+    assert b_wait < 0.2, f"acquire blocked {b_wait:.2f}s behind a sleeping waiter"

@@ -19,6 +19,7 @@ class MockToolHandlers:
         self.last_institution_args: dict[str, Any] | None = None
         self.last_trends_args: dict[str, Any] | None = None
         self.last_journal_args: dict[str, Any] | None = None
+        self.journal_arg_history: list[dict[str, Any]] = []
 
     async def search_papers(self, arguments: dict[str, Any]) -> dict[str, Any]:
         self.last_search_args = arguments
@@ -77,6 +78,7 @@ class MockToolHandlers:
 
     async def get_journal_metrics(self, arguments: dict[str, Any]) -> dict[str, Any]:
         self.last_journal_args = arguments
+        self.journal_arg_history.append(dict(arguments))
         title = arguments.get("title") or "Nature"
         return {
             "success": True,
