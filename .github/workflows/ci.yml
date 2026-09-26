@@ -21,9 +21,9 @@ jobs:
           python -m pip install -e "packages/elsevier-mcp[dev]"
           python -m pip install -r apps/api/requirements.txt build twine
       - name: Run unit tests (elsevier-mcp)
-        run: pytest packages/elsevier-mcp/tests/ -v
+        run: pytest packages/elsevier-mcp/tests/ -v --cov=elsevier_mcp --cov-report=term-missing --cov-fail-under=90
       - name: Run unit tests (api)
-        run: pytest apps/api/tests/ -v
+        run: pytest apps/api/tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=90
       - name: Compile Python files
         run: python -m compileall -q packages/elsevier-mcp/elsevier_mcp packages/elsevier-mcp/elsevier_mcp_complete.py packages/elsevier-mcp/test.py apps/api/app
       - name: Build package
