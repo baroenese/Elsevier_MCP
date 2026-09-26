@@ -246,16 +246,19 @@ Input questions like the following:
 ## 🧪 Testing
 
 ```bash
+# Unit tests (Nx)
+npx nx test elsevier-mcp   # pytest with coverage report
+npx nx test api            # pytest with coverage report
+
+# Direct pytest
+pytest packages/elsevier-mcp/tests/ -v
+pytest apps/api/tests/ -v
+
 # Package and metadata checks
-python -m compileall -q elsevier_mcp_complete.py examples test.py
-python -m build
-python -m twine check dist/*
+(cd packages/elsevier-mcp && python -m build && python -m twine check dist/*)
 
 # Live API tests (requires ELSEVIER_API_KEY)
-python test.py
-
-# Direct handler examples
-python examples/basic_usage.py
+python packages/elsevier-mcp/test.py
 ```
 
 ## 🔧 Troubleshooting
@@ -344,10 +347,11 @@ To confirm settings are working correctly:
 
 ## 📦 Dependencies
 
-- `requests`: HTTP API client
-- `python-dotenv`: Environment variable management
+- `httpx`: async HTTP API client (with connection pooling and retry)
+- `pydantic`: input validation models
+- `mcp`: Model Context Protocol types
 
-See `requirements.txt` for complete details.
+See `packages/elsevier-mcp/requirements.txt` for complete details.
 
 ## 📄 License
 
@@ -402,8 +406,8 @@ npm install
 npx nx run-many -t test
 
 # Run tests individually per project
-npx nx test elsevier-mcp   # Python MCP server tests (42 tests, respx mocks)
-npx nx test api            # FastAPI backend endpoint tests (19 tests)
+npx nx test elsevier-mcp   # Python MCP server tests (85 tests, respx mocks, coverage report)
+npx nx test api            # FastAPI backend endpoint tests (25 tests, coverage report)
 npx nx test web            # Next.js 16 frontend tests (Node 24 test runner + tsc)
 npx nx test ui             # Shared UI component type tests
 

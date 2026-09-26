@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-09-27
+
+### Added
+- pytest-cov coverage reporting in `nx test` for both Python projects (`elsevier-mcp` 92.9%, `api` 92%).
+- Ruff lint targets replacing `compileall` (`nx lint elsevier-mcp`, `nx lint api`) with pragmatic rule config.
+- ESLint flat config (`typescript-eslint` recommended) for `apps/web` and `packages/ui`; `nx lint web`/`nx lint ui` now run eslint + `tsc --noEmit`.
+- CI now runs both pytest suites and `compileall` with post-monorepo paths (tests previously never ran in CI); release workflow builds from `packages/elsevier-mcp`.
+- 39 new tests: stdio loop (`-32700`/`-32603`, CLI flags), client retries/timeouts/env fallbacks/lifecycle, resource templates with error branches, remaining prompt templates, `inputSchema` ↔ Pydantic consistency, rate-limiter concurrency regression, API trends clamping, journal-compare rules, config error path, DI caching.
+
+### Changed
+- `test.py` live-check script migrated from `requests` to `httpx` (already a package dependency) with type hints; `requirements.txt` updated accordingly.
+- Internal refactor of `handlers.py`: shared `_fetch_json`/`_validated`/`_to_int`/`_parse_total_results` helpers replace copy-pasted request and integer-coercion boilerplate; `get_journal_metrics` parsing split into testable helpers. External result shapes unchanged (locked by regression tests).
+
+### Fixed
+- `TokenBucketRateLimiter.acquire` no longer sleeps while holding the lock (concurrent waiters no longer serialize) and no longer discards fractional token credit after waiting.
+- `tools/call` maps unexpected handler exceptions to JSON-RPC `-32603` instead of crashing the stdio loop.
+- Removed legacy `elsevier_webapp.py` (superseded by `apps/api`) and its `static/` assets; `next lint` script (removed in Next 16) replaced with ESLint.
+
 ## [Unreleased]
 
 ### Added

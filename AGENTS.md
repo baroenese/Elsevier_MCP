@@ -33,21 +33,22 @@ MCP server exposing Elsevier academic APIs (Scopus search, SciVal journal metric
 
 ```bash
 # Nx monorepo verification
-npx nx test elsevier-mcp                                             # Python unit tests (respx mocked)
-npx nx test api                                                      # FastAPI route + endpoint tests
+npx nx test elsevier-mcp                                             # Python unit tests (respx mocked, coverage report)
+npx nx test api                                                      # FastAPI route + endpoint tests (coverage report)
 npx nx build web                                                     # Next.js 16 production build
-npx nx lint api && npx nx lint elsevier-mcp                          # Python syntax check
+npx nx lint api && npx nx lint elsevier-mcp                          # ruff check (Python)
+npx nx lint web && npx nx lint ui                                    # eslint + tsc --noEmit (TypeScript)
 
 # Direct Python commands (system python has no pytest — use the repo venv at .venv/bin/python)
-pytest packages/elsevier-mcp/tests/ -v
-pytest apps/api/tests/ -v
+pytest packages/elsevier-mcp/tests/ -v --cov=elsevier_mcp --cov-report=term-missing
+pytest apps/api/tests/ -v --cov=app --cov-report=term-missing
 python packages/elsevier-mcp/test.py                                 # live endpoint tests, requires ELSEVIER_API_KEY
 ```
 
 ## Conventions and gotchas
 
-- **MCP result shape**: tool handlers return `{"success": True, ...}` or `{"success": False, "error": "..."}` — always a dict, never raise to the caller.
-- **Tool registration**: every tool needs an accurate `inputSchema` in `_define_tools()`, not just a handler method.
+- **MCP result shape**: tool handlers return `{"success": True, ...}` or `{"success": False, "error": "..."}` — always a dict, never raise to the caller. The shared request/validation helpers live in `handlers.py` (`_fetch_json`, `_validated`, `_to_int`, `_parse_total_results`) — use them instead of re-rolling the try/except skeleton.
+- **Tool registration**: every tool needs an accurate `inputSchema` in `define_tools()`, not just a handler method; `tests/test_tool_schemas.py` enforces that schemas match the Pydantic input models in `schemas.py`.
 - **Auth**: use `get_headers()` for all API calls (`X-ELS-APIKey`, `Accept: application/json`). Env vars: `ELSEVIER_API_KEY` (required for live calls), `ELSEVIER_INSTTOKEN` (optional). Optional tuning knobs: `ELSEVIER_RATE_LIMIT` (req/sec, default 6), `ELSEVIER_LOG_LEVEL` (default `INFO`), `ELSEVIER_TIMEOUT` (seconds, default 15). Never hardcode keys.
 - **Scopus query syntax**: use `AFFIL("Institution Name")` — lowercase `aff()` returns HTTP 400. General search wraps in `TITLE-ABS-KEY(query)`; year via `PUBYEAR = 2024`; OA via `OPENACCESS(1)`.
 - **Elsevier JSON quirks**: numeric fields like `opensearch:totalResults` and `citedby-count` arrive as **strings** — wrap in `int(...)` before formatting/arithmetic.
@@ -62,6 +63,6 @@ python packages/elsevier-mcp/test.py                                 # live endp
 
 ## Testing the stdio protocol manually
 
-`echo '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | python elsevier_mcp_complete.py`
+`echo '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | python packages/elsevier-mcp/elsevier_mcp_complete.py`
 
 Full initialize/tools/call/prompts/resources command set is in `.agents/skills/elsevier-mcp-dev/SKILL.md` §3.

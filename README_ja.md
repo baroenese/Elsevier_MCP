@@ -246,16 +246,19 @@ export ELSEVIER_API_KEY="your_api_key_here"
 ## 🧪 テスト
 
 ```bash
+# ユニットテスト（Nx）
+npx nx test elsevier-mcp   # pytest（カバレッジレポート付き）
+npx nx test api            # pytest（カバレッジレポート付き）
+
+# pytest を直接実行
+pytest packages/elsevier-mcp/tests/ -v
+pytest apps/api/tests/ -v
+
 # package と metadata の確認
-python -m compileall -q elsevier_mcp_complete.py examples test.py
-python -m build
-python -m twine check dist/*
+(cd packages/elsevier-mcp && python -m build && python -m twine check dist/*)
 
 # live APIテスト（ELSEVIER_API_KEY が必要）
-python test.py
-
-# handler を直接呼ぶサンプル
-python examples/basic_usage.py
+python packages/elsevier-mcp/test.py
 ```
 
 ## 🔧 トラブルシューティング
@@ -344,10 +347,11 @@ python examples/basic_usage.py
 
 ## 📦 依存関係
 
-- `requests`: HTTP APIクライアント
-- `python-dotenv`: 環境変数管理
+- `httpx`: 非同期HTTP APIクライアント（コネクションプーリング・リトライ付き）
+- `pydantic`: 入力バリデーションモデル
+- `mcp`: Model Context Protocol 型定義
 
-詳細は `requirements.txt` を参照してください。
+詳細は `packages/elsevier-mcp/requirements.txt` を参照してください。
 
 ## 📄 ライセンス
 
