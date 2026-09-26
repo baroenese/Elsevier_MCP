@@ -2,9 +2,10 @@
 
 from datetime import datetime
 import logging
-from typing import Any
+from typing import Any, Callable
 
-from pydantic import ValidationError
+import httpx
+from pydantic import BaseModel, ValidationError
 
 from elsevier_mcp.client import ElsevierAPIClient
 from elsevier_mcp.schemas import (
@@ -18,6 +19,54 @@ from elsevier_mcp.schemas import (
 )
 
 logger = logging.getLogger("elsevier_mcp.handlers")
+
+
+def _to_int(raw: Any, default: int = 0) -> int:
+    """Coerce an Elsevier string/numeric field to int, falling back on garbage.
+
+    Args:
+        raw: Raw field value (Elsevier often sends numbers as strings).
+        default: Value returned when coercion fails.
+
+    Returns:
+        Integer value, or ``default``.
+    """
+    try:
+        return int(raw)
+    except (ValueError, TypeError):
+        return default
+
+
+def _parse_total_results(data: dict[str, Any]) -> int:
+    """Extract ``opensearch:totalResults`` from a Scopus search response as int.
+
+    Args:
+        data: Parsed Scopus search response body.
+
+    Returns:
+        Total result count, or 0 when absent/unparseable.
+    """
+    raw_total = data.get("search-results", {}).get("opensearch:totalResults", 0)
+    return _to_int(raw_total)
+
+
+def _validated(
+    model_cls: type[BaseModel], arguments: dict[str, Any]
+) -> tuple[BaseModel | None, dict[str, Any] | None]:
+    """Validate tool arguments against a Pydantic input model.
+
+    Args:
+        model_cls: Pydantic input model class.
+        arguments: Raw tool arguments.
+
+    Returns:
+        ``(model, None)`` when valid, else ``(None, error-dict)``.
+    """
+    try:
+        return model_cls(**arguments), None
+    except ValidationError as exc:
+        return None, {"success": False, "error": f"Validation error: {exc}"}
+
 
 FIELD_CODES = (
     "TITLE-ABS-KEY(",
@@ -124,10 +173,7 @@ def parse_paper_entry(entry: dict[str, Any], open_access: bool = False) -> dict[
         Normalized paper dictionary.
     """
     raw_citations = entry.get("citedby-count", 0)
-    try:
-        citations = int(raw_citations)
-    except (ValueError, TypeError):
-        citations = 0
+    citations = _to_int(raw_citations)
 
     paper: dict[str, Any] = {
         "title": entry.get("dc:title", "No title"),
@@ -141,6 +187,89 @@ def parse_paper_entry(entry: dict[str, Any], open_access: bool = False) -> dict[
     if open_access:
         paper["open_access"] = True
     return paper
+
+
+def _parse_metric_list(entry: dict[str, Any], list_key: str, item_key: str) -> tuple[Any, Any]:
+    """Extract a single metric value/year pair from an SJRList/SNIPList structure.
+
+    Args:
+        entry: Serial metadata entry.
+        list_key: Either ``"SJRList"`` or ``"SNIPList"``.
+        item_key: Either ``"SJR"`` or ``"SNIP"``.
+
+    Returns:
+        ``(value, year)`` tuple; either element may be None when absent.
+    """
+    container = entry.get(list_key)
+    metric_list = container.get(item_key, []) if isinstance(container, dict) else []
+    if metric_list and isinstance(metric_list, list) and isinstance(metric_list[0], dict):
+        return metric_list[0].get("$"), metric_list[0].get("@year")
+    return None, None
+
+
+def _quartile_from_percentile(percentile: float) -> str:
+    """Map a percentile score (0-100) to its quartile label (Q1-Q4)."""
+    if percentile >= 75:
+        return "Q1"
+    if percentile >= 50:
+        return "Q2"
+    if percentile >= 25:
+        return "Q3"
+    return "Q4"
+
+
+def _parse_subject_rankings(citescore_info: dict[str, Any]) -> tuple[list[dict[str, Any]], str | None]:
+    """Parse subject rankings and best quartile from CiteScore year info.
+
+    Args:
+        citescore_info: ``citeScoreYearInfoList`` value from the serial entry.
+
+    Returns:
+        ``(subject_rankings, best_quartile)``; best_quartile is None when no
+        complete ranking data is present.
+    """
+    subject_rankings: list[dict[str, Any]] = []
+    best_quartile: str | None = None
+
+    year_info_list = citescore_info.get("citeScoreYearInfo", [])
+    if not (isinstance(year_info_list, list) and year_info_list):
+        return subject_rankings, best_quartile
+
+    latest_year_data = next((y for y in year_info_list if y.get("@status") == "Complete"), year_info_list[0])
+    info_list = latest_year_data.get("citeScoreInformationList", [])
+    if not (isinstance(info_list, list) and info_list):
+        return subject_rankings, best_quartile
+
+    score_info = info_list[0].get("citeScoreInfo", [])
+    if not (isinstance(score_info, list) and score_info):
+        return subject_rankings, best_quartile
+
+    ranks = score_info[0].get("citeScoreSubjectRank", [])
+    if not isinstance(ranks, list):
+        return subject_rankings, best_quartile
+
+    for r in ranks:
+        if not isinstance(r, dict):
+            continue
+        try:
+            perc = float(r.get("percentile", "0"))
+        except (ValueError, TypeError):
+            perc = 0.0
+
+        q = _quartile_from_percentile(perc)
+        if best_quartile is None or q < best_quartile:
+            best_quartile = q
+
+        rank_val = r.get("rank")
+        parsed_rank = int(rank_val) if str(rank_val).isdigit() else rank_val
+        subject_rankings.append({
+            "subject_code": r.get("subjectCode"),
+            "rank": parsed_rank,
+            "percentile": perc,
+            "quartile": q,
+        })
+
+    return subject_rankings, best_quartile
 
 
 def define_tools() -> dict[str, dict[str, Any]]:
@@ -300,6 +429,36 @@ class ToolHandlers:
         """
         self.client = client or ElsevierAPIClient()
 
+    async def _fetch_json(
+        self,
+        tool_name: str,
+        path: str,
+        params: dict[str, Any] | None = None,
+        error_message: Callable[[httpx.Response], str] | None = None,
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        """GET a JSON payload from the Elsevier API with unified error handling.
+
+        Args:
+            tool_name: Tool name used in exception logging.
+            path: API path to request.
+            params: Optional query parameters.
+            error_message: Optional formatter for non-success responses;
+                defaults to ``API Error: {status_code}``.
+
+        Returns:
+            ``(data, None)`` on success, else ``(None, error-dict)``. Errors are
+            always returned as dicts, never raised to the caller.
+        """
+        try:
+            response = await self.client.get(path, params=params)
+            if response.is_success:
+                return response.json(), None
+            message = error_message(response) if error_message else f"API Error: {response.status_code}"
+            return None, {"success": False, "error": message}
+        except Exception as exc:
+            logger.exception("%s failed", tool_name)
+            return None, {"success": False, "error": str(exc)}
+
     async def search_papers(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """論文検索 (Search Scopus papers by query, count, and year).
 
@@ -309,11 +468,11 @@ class ToolHandlers:
         Returns:
             Dict containing success status, paper items, and total count.
         """
-        try:
-            params_input = SearchPapersInput(**arguments)
-        except ValidationError as exc:
-            return {"success": False, "error": f"Validation error: {exc}"}
+        params_input, error = _validated(SearchPapersInput, arguments)
+        if error:
+            return error
 
+        assert params_input is not None
         search_query = build_scopus_query(params_input.query, year=params_input.year)
         params = {
             "query": search_query,
@@ -321,28 +480,20 @@ class ToolHandlers:
             "sort": "citedby-count",
         }
 
-        try:
-            response = await self.client.get("/content/search/scopus", params=params)
-            if response.is_success:
-                data = response.json()
-                entries = data.get("search-results", {}).get("entry", [])
-                raw_total = data.get("search-results", {}).get("opensearch:totalResults", 0)
-                try:
-                    total = int(raw_total)
-                except (ValueError, TypeError):
-                    total = 0
+        data, error = await self._fetch_json("search_papers", "/content/search/scopus", params=params)
+        if error:
+            return error
 
-                results = [parse_paper_entry(entry) for entry in entries]
-                return {
-                    "success": True,
-                    "total_results": total,
-                    "papers": results,
-                    "query": params_input.query,
-                }
-            return {"success": False, "error": f"API Error: {response.status_code}"}
-        except Exception as exc:
-            logger.exception("search_papers failed")
-            return {"success": False, "error": str(exc)}
+        assert data is not None
+        entries = data.get("search-results", {}).get("entry", [])
+        total = _parse_total_results(data)
+        results = [parse_paper_entry(entry) for entry in entries]
+        return {
+            "success": True,
+            "total_results": total,
+            "papers": results,
+            "query": params_input.query,
+        }
 
     async def get_paper_abstract(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """論文抄録取得 (Retrieve paper abstract by EID or DOI).
@@ -353,45 +504,39 @@ class ToolHandlers:
         Returns:
             Dict containing success status and paper abstract metadata.
         """
-        try:
-            params_input = GetPaperAbstractInput(**arguments)
-        except ValidationError as exc:
-            return {"success": False, "error": f"Validation error: {exc}"}
+        params_input, error = _validated(GetPaperAbstractInput, arguments)
+        if error:
+            return error
 
-        if params_input.eid:
-            path = f"/content/abstract/eid/{params_input.eid}"
-        else:
-            path = f"/content/abstract/doi/{params_input.doi}"
+        assert params_input is not None
+        path = f"/content/abstract/eid/{params_input.eid}" if params_input.eid else f"/content/abstract/doi/{params_input.doi}"
 
-        try:
-            response = await self.client.get(path)
-            if response.is_success:
-                data = response.json()
-                abstract_response = data.get("abstracts-retrieval-response", {})
-                coredata = abstract_response.get("coredata", {})
+        data, error = await self._fetch_json("get_paper_abstract", path)
+        if error:
+            return error
 
-                raw_abstract = coredata.get("dc:description")
-                abstract_text = (
-                    raw_abstract
-                    if raw_abstract and str(raw_abstract).strip() != "No abstract"
-                    else "Full narrative abstract is not available in basic view. Access typically requires an institutional subscription (ELSEVIER_INSTTOKEN). You can view full article details and open access full-text via the DOI link."
-                )
+        assert data is not None
+        abstract_response = data.get("abstracts-retrieval-response", {})
+        coredata = abstract_response.get("coredata", {})
 
-                result = {
-                    "title": coredata.get("dc:title", "No title"),
-                    "abstract": abstract_text,
-                    "authors": _parse_author_names(coredata.get("dc:creator")),
-                    "journal": coredata.get("prism:publicationName", "Unknown"),
-                    "year": coredata.get("prism:coverDate", ""),
-                    "doi": coredata.get("prism:doi", ""),
-                    "eid": coredata.get("eid", ""),
-                    "citations": str(coredata.get("citedby-count", "0")),
-                }
-                return {"success": True, "paper": result}
-            return {"success": False, "error": f"API Error: {response.status_code}"}
-        except Exception as exc:
-            logger.exception("get_paper_abstract failed")
-            return {"success": False, "error": str(exc)}
+        raw_abstract = coredata.get("dc:description")
+        abstract_text = (
+            raw_abstract
+            if raw_abstract and str(raw_abstract).strip() != "No abstract"
+            else "Full narrative abstract is not available in basic view. Access typically requires an institutional subscription (ELSEVIER_INSTTOKEN). You can view full article details and open access full-text via the DOI link."
+        )
+
+        result = {
+            "title": coredata.get("dc:title", "No title"),
+            "abstract": abstract_text,
+            "authors": _parse_author_names(coredata.get("dc:creator")),
+            "journal": coredata.get("prism:publicationName", "Unknown"),
+            "year": coredata.get("prism:coverDate", ""),
+            "doi": coredata.get("prism:doi", ""),
+            "eid": coredata.get("eid", ""),
+            "citations": str(coredata.get("citedby-count", "0")),
+        }
+        return {"success": True, "paper": result}
 
     async def get_author_info(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """著者情報取得 (Retrieve researcher profile by Scopus author ID).
@@ -402,30 +547,27 @@ class ToolHandlers:
         Returns:
             Dict containing success status and author profile.
         """
-        try:
-            params_input = GetAuthorInfoInput(**arguments)
-        except ValidationError as exc:
-            return {"success": False, "error": f"Validation error: {exc}"}
+        params_input, error = _validated(GetAuthorInfoInput, arguments)
+        if error:
+            return error
 
+        assert params_input is not None
         path = f"/analytics/scival/author/{params_input.author_id}"
 
-        try:
-            response = await self.client.get(path)
-            if response.is_success:
-                data = response.json()
-                author_data = data.get("author", {})
+        data, error = await self._fetch_json("get_author_info", path)
+        if error:
+            return error
 
-                result = {
-                    "author_id": params_input.author_id,
-                    "name": author_data.get("name", "Unknown"),
-                    "current_institution": author_data.get("currentInstitutionName", "Unknown"),
-                    "scopus_url": author_data.get("link", {}).get("@href", ""),
-                }
-                return {"success": True, "author": result}
-            return {"success": False, "error": f"API Error: {response.status_code}"}
-        except Exception as exc:
-            logger.exception("get_author_info failed")
-            return {"success": False, "error": str(exc)}
+        assert data is not None
+        author_data = data.get("author", {})
+
+        result = {
+            "author_id": params_input.author_id,
+            "name": author_data.get("name", "Unknown"),
+            "current_institution": author_data.get("currentInstitutionName", "Unknown"),
+            "scopus_url": author_data.get("link", {}).get("@href", ""),
+        }
+        return {"success": True, "author": result}
 
     async def analyze_research_trends(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """研究分野トレンド分析 (Analyze multi-year research trend and growth rates).
@@ -436,48 +578,44 @@ class ToolHandlers:
         Returns:
             Dict containing success status, yearly publication counts, and growth rates.
         """
-        try:
-            params_input = AnalyzeResearchTrendsInput(**arguments)
-        except ValidationError as exc:
-            return {"success": False, "error": f"Validation error: {exc}"}
+        params_input, error = _validated(AnalyzeResearchTrendsInput, arguments)
+        if error:
+            return error
 
+        assert params_input is not None
         yearly_data: dict[int, int] = {}
 
-        try:
-            for year in params_input.years:
-                query = f"TITLE-ABS-KEY({params_input.field}) AND PUBYEAR = {year}"
-                params = {"query": query, "count": 1}
-                response = await self.client.get("/content/search/scopus", params=params)
-                if response.is_success:
-                    data = response.json()
-                    raw_total = data.get("search-results", {}).get("opensearch:totalResults", 0)
-                    try:
-                        total = int(raw_total)
-                    except (ValueError, TypeError):
-                        total = 0
-                    yearly_data[year] = total
-                else:
-                    return {"success": False, "error": f"API Error {response.status_code} for year {year}"}
+        for year in params_input.years:
+            query = f"TITLE-ABS-KEY({params_input.field}) AND PUBYEAR = {year}"
+            params = {"query": query, "count": 1}
+            data, error = await self._fetch_json(
+                "analyze_research_trends",
+                "/content/search/scopus",
+                params=params,
+                error_message=lambda resp, y=year: f"API Error {resp.status_code} for year {y}",
+            )
+            if error:
+                return error
 
-            growth_rates: dict[str, float] = {}
-            years_sorted = sorted(yearly_data.keys())
-            for i in range(1, len(years_sorted)):
-                prev_year = years_sorted[i - 1]
-                curr_year = years_sorted[i]
-                if yearly_data[prev_year] > 0:
-                    growth_rate = ((yearly_data[curr_year] - yearly_data[prev_year]) / yearly_data[prev_year]) * 100
-                    growth_rates[f"{prev_year}-{curr_year}"] = round(growth_rate, 2)
+            assert data is not None
+            yearly_data[year] = _parse_total_results(data)
 
-            return {
-                "success": True,
-                "field": params_input.field,
-                "yearly_papers": yearly_data,
-                "growth_rates": growth_rates,
-                "total_papers": sum(yearly_data.values()),
-            }
-        except Exception as exc:
-            logger.exception("analyze_research_trends failed")
-            return {"success": False, "error": str(exc)}
+        growth_rates: dict[str, float] = {}
+        years_sorted = sorted(yearly_data.keys())
+        for i in range(1, len(years_sorted)):
+            prev_year = years_sorted[i - 1]
+            curr_year = years_sorted[i]
+            if yearly_data[prev_year] > 0:
+                growth_rate = ((yearly_data[curr_year] - yearly_data[prev_year]) / yearly_data[prev_year]) * 100
+                growth_rates[f"{prev_year}-{curr_year}"] = round(growth_rate, 2)
+
+        return {
+            "success": True,
+            "field": params_input.field,
+            "yearly_papers": yearly_data,
+            "growth_rates": growth_rates,
+            "total_papers": sum(yearly_data.values()),
+        }
 
     async def get_institution_papers(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """機関論文統計 (Retrieve publication statistics for an academic institution).
@@ -488,11 +626,11 @@ class ToolHandlers:
         Returns:
             Dict containing success status, total publication count, and top cited papers.
         """
-        try:
-            params_input = GetInstitutionPapersInput(**arguments)
-        except ValidationError as exc:
-            return {"success": False, "error": f"Validation error: {exc}"}
+        params_input, error = _validated(GetInstitutionPapersInput, arguments)
+        if error:
+            return error
 
+        assert params_input is not None
         query = f'AFFIL("{params_input.institution}") AND PUBYEAR = {params_input.year}'
         params = {
             "query": query,
@@ -500,43 +638,31 @@ class ToolHandlers:
             "sort": "citedby-count",
         }
 
-        try:
-            response = await self.client.get("/content/search/scopus", params=params)
-            if response.is_success:
-                data = response.json()
-                entries = data.get("search-results", {}).get("entry", [])
-                raw_total = data.get("search-results", {}).get("opensearch:totalResults", 0)
-                try:
-                    total = int(raw_total)
-                except (ValueError, TypeError):
-                    total = 0
+        data, error = await self._fetch_json("get_institution_papers", "/content/search/scopus", params=params)
+        if error:
+            return error
 
-                top_papers = []
-                for entry in entries:
-                    raw_cites = entry.get("citedby-count", 0)
-                    try:
-                        cites = int(raw_cites)
-                    except (ValueError, TypeError):
-                        cites = 0
-                    top_papers.append({
-                        "title": entry.get("dc:title", "No title"),
-                        "authors": entry.get("dc:creator", "Unknown"),
-                        "journal": entry.get("prism:publicationName", "Unknown"),
-                        "citations": cites,
-                        "doi": entry.get("prism:doi", ""),
-                    })
+        assert data is not None
+        entries = data.get("search-results", {}).get("entry", [])
+        total = _parse_total_results(data)
 
-                return {
-                    "success": True,
-                    "institution": params_input.institution,
-                    "year": params_input.year,
-                    "total_papers": total,
-                    "top_papers": top_papers,
-                }
-            return {"success": False, "error": f"API Error: {response.status_code}"}
-        except Exception as exc:
-            logger.exception("get_institution_papers failed")
-            return {"success": False, "error": str(exc)}
+        top_papers = []
+        for entry in entries:
+            top_papers.append({
+                "title": entry.get("dc:title", "No title"),
+                "authors": entry.get("dc:creator", "Unknown"),
+                "journal": entry.get("prism:publicationName", "Unknown"),
+                "citations": _to_int(entry.get("citedby-count", 0)),
+                "doi": entry.get("prism:doi", ""),
+            })
+
+        return {
+            "success": True,
+            "institution": params_input.institution,
+            "year": params_input.year,
+            "total_papers": total,
+            "top_papers": top_papers,
+        }
 
     async def search_open_access_papers(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """オープンアクセス論文検索 (Search open access papers in a given field).
@@ -547,11 +673,11 @@ class ToolHandlers:
         Returns:
             Dict containing success status, open access papers list, and total count.
         """
-        try:
-            params_input = SearchOpenAccessPapersInput(**arguments)
-        except ValidationError as exc:
-            return {"success": False, "error": f"Validation error: {exc}"}
+        params_input, error = _validated(SearchOpenAccessPapersInput, arguments)
+        if error:
+            return error
 
+        assert params_input is not None
         target_year = params_input.year if params_input.year is not None else datetime.now().year
         query = f"TITLE-ABS-KEY({params_input.field}) AND OPENACCESS(1) AND PUBYEAR = {target_year}"
         params = {
@@ -560,28 +686,21 @@ class ToolHandlers:
             "sort": "citedby-count",
         }
 
-        try:
-            response = await self.client.get("/content/search/scopus", params=params)
-            if response.is_success:
-                data = response.json()
-                entries = data.get("search-results", {}).get("entry", [])
-                raw_total = data.get("search-results", {}).get("opensearch:totalResults", 0)
-                try:
-                    total = int(raw_total)
-                except (ValueError, TypeError):
-                    total = 0
+        data, error = await self._fetch_json("search_open_access_papers", "/content/search/scopus", params=params)
+        if error:
+            return error
 
-                papers = [parse_paper_entry(entry, open_access=True) for entry in entries]
-                return {
-                    "success": True,
-                    "field": params_input.field,
-                    "total_open_access": total,
-                    "papers": papers,
-                }
-            return {"success": False, "error": f"API Error: {response.status_code}"}
-        except Exception as exc:
-            logger.exception("search_open_access_papers failed")
-            return {"success": False, "error": str(exc)}
+        assert data is not None
+        entries = data.get("search-results", {}).get("entry", [])
+        total = _parse_total_results(data)
+
+        papers = [parse_paper_entry(entry, open_access=True) for entry in entries]
+        return {
+            "success": True,
+            "field": params_input.field,
+            "total_open_access": total,
+            "papers": papers,
+        }
 
     async def get_journal_metrics(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """学術雑誌・ジャーナル評価指標取得 (Retrieve CiteScore, SJR, SNIP, and Quartiles).
@@ -592,108 +711,64 @@ class ToolHandlers:
         Returns:
             Dict containing success status and journal metrics.
         """
-        try:
-            params_input = GetJournalMetricsInput(**arguments)
-        except ValidationError as exc:
-            return {"success": False, "error": f"Validation error: {exc}"}
+        params_input, error = _validated(GetJournalMetricsInput, arguments)
+        if error:
+            return error
 
+        assert params_input is not None
         params: dict[str, Any] = {"view": "CITESCORE", "count": 1}
         if params_input.issn:
             params["issn"] = params_input.issn
         elif params_input.title:
             params["title"] = params_input.title
 
-        try:
-            response = await self.client.get("/content/serial/title", params=params)
-            if response.is_success:
-                data = response.json()
-                entries = data.get("serial-metadata-response", {}).get("entry", [])
-                if not entries:
-                    ident = f"title='{params_input.title}'" if params_input.title else f"issn='{params_input.issn}'"
-                    return {"success": False, "error": f"Journal not found for query ({ident})"}
+        data, error = await self._fetch_json(
+            "get_journal_metrics",
+            "/content/serial/title",
+            params=params,
+            error_message=lambda resp: f"API Error {resp.status_code}: {resp.text[:200]}",
+        )
+        if error:
+            return error
 
-                entry = entries[0]
-                citescore_info = entry.get("citeScoreYearInfoList", {}) or {}
-                citescore_current = citescore_info.get("citeScoreCurrentMetric")
-                citescore_current_year = citescore_info.get("citeScoreCurrentMetricYear")
-                citescore_tracker = citescore_info.get("citeScoreTracker")
-                citescore_tracker_year = citescore_info.get("citeScoreTrackerYear")
+        assert data is not None
+        entries = data.get("serial-metadata-response", {}).get("entry", [])
+        if not entries:
+            ident = f"title='{params_input.title}'" if params_input.title else f"issn='{params_input.issn}'"
+            return {"success": False, "error": f"Journal not found for query ({ident})"}
 
-                sjr_list = entry.get("SJRList", {}).get("SJR", []) if isinstance(entry.get("SJRList"), dict) else []
-                sjr_val = sjr_list[0].get("$") if sjr_list and isinstance(sjr_list, list) and isinstance(sjr_list[0], dict) else None
-                sjr_year = sjr_list[0].get("@year") if sjr_list and isinstance(sjr_list, list) and isinstance(sjr_list[0], dict) else None
+        entry = entries[0]
+        citescore_info = entry.get("citeScoreYearInfoList", {}) or {}
 
-                snip_list = entry.get("SNIPList", {}).get("SNIP", []) if isinstance(entry.get("SNIPList"), dict) else []
-                snip_val = snip_list[0].get("$") if snip_list and isinstance(snip_list, list) and isinstance(snip_list[0], dict) else None
-                snip_year = snip_list[0].get("@year") if snip_list and isinstance(snip_list, list) and isinstance(snip_list[0], dict) else None
+        sjr_val, sjr_year = _parse_metric_list(entry, "SJRList", "SJR")
+        snip_val, snip_year = _parse_metric_list(entry, "SNIPList", "SNIP")
+        subject_rankings, best_quartile = _parse_subject_rankings(citescore_info)
 
-                subject_rankings: list[dict[str, Any]] = []
-                best_quartile: str | None = None
+        citescore_current = citescore_info.get("citeScoreCurrentMetric")
+        citescore_tracker = citescore_info.get("citeScoreTracker")
 
-                year_info_list = citescore_info.get("citeScoreYearInfo", [])
-                if isinstance(year_info_list, list) and year_info_list:
-                    latest_year_data = next((y for y in year_info_list if y.get("@status") == "Complete"), year_info_list[0])
-                    info_list = latest_year_data.get("citeScoreInformationList", [])
-                    if isinstance(info_list, list) and info_list:
-                        score_info = info_list[0].get("citeScoreInfo", [])
-                        if isinstance(score_info, list) and score_info:
-                            ranks = score_info[0].get("citeScoreSubjectRank", [])
-                            if isinstance(ranks, list):
-                                for r in ranks:
-                                    if isinstance(r, dict):
-                                        perc_str = r.get("percentile", "0")
-                                        try:
-                                            perc = float(perc_str)
-                                        except (ValueError, TypeError):
-                                            perc = 0.0
-
-                                        if perc >= 75:
-                                            q = "Q1"
-                                        elif perc >= 50:
-                                            q = "Q2"
-                                        elif perc >= 25:
-                                            q = "Q3"
-                                        else:
-                                            q = "Q4"
-
-                                        if best_quartile is None or q < best_quartile:
-                                            best_quartile = q
-
-                                        rank_val = r.get("rank")
-                                        parsed_rank = int(rank_val) if str(rank_val).isdigit() else rank_val
-                                        subject_rankings.append({
-                                            "subject_code": r.get("subjectCode"),
-                                            "rank": parsed_rank,
-                                            "percentile": perc,
-                                            "quartile": q,
-                                        })
-
-                result = {
-                    "title": entry.get("dc:title", "Unknown Title"),
-                    "publisher": entry.get("dc:publisher", "Unknown Publisher"),
-                    "issn": entry.get("prism:issn", ""),
-                    "eissn": entry.get("prism:eIssn", ""),
-                    "aggregation_type": entry.get("prism:aggregationType", "Journal"),
-                    "open_access": entry.get("openaccess") == "1",
-                    "citescore": {
-                        "current": float(citescore_current) if citescore_current is not None else None,
-                        "year": citescore_current_year,
-                        "tracker": float(citescore_tracker) if citescore_tracker is not None else None,
-                        "tracker_year": citescore_tracker_year,
-                    },
-                    "sjr": {
-                        "value": float(sjr_val) if sjr_val is not None else None,
-                        "year": sjr_year,
-                    },
-                    "snip": {
-                        "value": float(snip_val) if snip_val is not None else None,
-                        "year": snip_year,
-                    },
-                    "best_quartile": best_quartile,
-                    "subject_rankings": subject_rankings,
-                }
-                return {"success": True, "journal": result}
-            return {"success": False, "error": f"API Error {response.status_code}: {response.text[:200]}"}
-        except Exception as exc:
-            logger.exception("get_journal_metrics failed")
-            return {"success": False, "error": str(exc)}
+        result = {
+            "title": entry.get("dc:title", "Unknown Title"),
+            "publisher": entry.get("dc:publisher", "Unknown Publisher"),
+            "issn": entry.get("prism:issn", ""),
+            "eissn": entry.get("prism:eIssn", ""),
+            "aggregation_type": entry.get("prism:aggregationType", "Journal"),
+            "open_access": entry.get("openaccess") == "1",
+            "citescore": {
+                "current": float(citescore_current) if citescore_current is not None else None,
+                "year": citescore_info.get("citeScoreCurrentMetricYear"),
+                "tracker": float(citescore_tracker) if citescore_tracker is not None else None,
+                "tracker_year": citescore_info.get("citeScoreTrackerYear"),
+            },
+            "sjr": {
+                "value": float(sjr_val) if sjr_val is not None else None,
+                "year": sjr_year,
+            },
+            "snip": {
+                "value": float(snip_val) if snip_val is not None else None,
+                "year": snip_year,
+            },
+            "best_quartile": best_quartile,
+            "subject_rankings": subject_rankings,
+        }
+        return {"success": True, "journal": result}

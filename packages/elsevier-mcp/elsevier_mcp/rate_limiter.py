@@ -37,6 +37,9 @@ class TokenBucketRateLimiter:
     async def acquire(self, tokens: float = 1.0) -> None:
         """Acquire the specified number of tokens, waiting if necessary.
 
+        Refill and consumption happen under the lock, but waiting happens
+        outside it so concurrent waiters do not serialize behind each other.
+
         Args:
             tokens: Number of tokens to consume (must be > 0 and <= burst).
 
@@ -48,17 +51,16 @@ class TokenBucketRateLimiter:
         if tokens > self.burst:
             raise ValueError(f"Requested tokens ({tokens}) exceed burst capacity ({self.burst})")
 
-        async with self._lock:
-            now = time.monotonic()
-            elapsed = now - self.last_refill
-            self.tokens = min(self.burst, self.tokens + elapsed * self.rate)
-            self.last_refill = now
+        while True:
+            async with self._lock:
+                now = time.monotonic()
+                elapsed = now - self.last_refill
+                self.tokens = min(self.burst, self.tokens + elapsed * self.rate)
+                self.last_refill = now
 
-            if self.tokens < tokens:
+                if self.tokens >= tokens:
+                    self.tokens -= tokens
+                    return
                 wait_time = (tokens - self.tokens) / self.rate
-                await asyncio.sleep(wait_time)
-                # After sleeping, tokens have accumulated to fulfill the request
-                self.tokens = 0.0
-                self.last_refill = time.monotonic()
-            else:
-                self.tokens -= tokens
+
+            await asyncio.sleep(wait_time)

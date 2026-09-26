@@ -2,7 +2,6 @@
 
 from datetime import datetime
 import re
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -16,6 +15,27 @@ def _default_trend_years() -> list[int]:
     """Return the last three calendar years for trend analysis."""
     cur = _current_year()
     return [cur - 2, cur - 1, cur]
+
+
+def strip_non_empty(value: str, field_name: str) -> str:
+    """Strip surrounding whitespace from a string field and reject empty results.
+
+    Shared validator body for all single-value string fields.
+
+    Args:
+        value: Raw field value.
+        field_name: Field name used in the error message.
+
+    Returns:
+        Stripped value.
+
+    Raises:
+        ValueError: If the stripped value is empty.
+    """
+    s = value.strip()
+    if not s:
+        raise ValueError(f"{field_name} must not be empty")
+    return s
 
 
 class SearchPapersInput(BaseModel):
@@ -70,10 +90,7 @@ class GetAuthorInfoInput(BaseModel):
     @classmethod
     def strip_id(cls, v: str) -> str:
         """Strip surrounding whitespace from author_id."""
-        s = v.strip()
-        if not s:
-            raise ValueError("author_id must not be empty")
-        return s
+        return strip_non_empty(v, "author_id")
 
 
 class AnalyzeResearchTrendsInput(BaseModel):
@@ -91,10 +108,7 @@ class AnalyzeResearchTrendsInput(BaseModel):
     @classmethod
     def strip_field(cls, v: str) -> str:
         """Strip surrounding whitespace from field."""
-        s = v.strip()
-        if not s:
-            raise ValueError("field must not be empty")
-        return s
+        return strip_non_empty(v, "field")
 
     @field_validator("years")
     @classmethod
@@ -120,10 +134,7 @@ class GetInstitutionPapersInput(BaseModel):
     @classmethod
     def strip_institution(cls, v: str) -> str:
         """Strip surrounding whitespace from institution name."""
-        s = v.strip()
-        if not s:
-            raise ValueError("institution must not be empty")
-        return s
+        return strip_non_empty(v, "institution")
 
     @field_validator("year")
     @classmethod
@@ -147,10 +158,7 @@ class SearchOpenAccessPapersInput(BaseModel):
     @classmethod
     def strip_field(cls, v: str) -> str:
         """Strip surrounding whitespace from field."""
-        s = v.strip()
-        if not s:
-            raise ValueError("field must not be empty")
-        return s
+        return strip_non_empty(v, "field")
 
 
 class GetJournalMetricsInput(BaseModel):

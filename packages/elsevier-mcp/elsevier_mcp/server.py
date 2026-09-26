@@ -17,6 +17,29 @@ VERSION = "1.2.0"
 logger = logging.getLogger("elsevier_mcp.server")
 
 
+def _jsonrpc_response(
+    req_id: Any,
+    result: Any = None,
+    error: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a JSON-RPC 2.0 response envelope.
+
+    Args:
+        req_id: Request id to echo back.
+        result: Result payload (used when ``error`` is None).
+        error: Optional error object with ``code`` and ``message``.
+
+    Returns:
+        JSON-RPC response dictionary.
+    """
+    response: dict[str, Any] = {"jsonrpc": "2.0", "id": req_id}
+    if error is not None:
+        response["error"] = error
+    else:
+        response["result"] = result
+    return response
+
+
 def configure_logging() -> None:
     """Configure structured logging output to stderr to prevent interfering with stdio transport."""
     level_name = os.getenv("ELSEVIER_LOG_LEVEL", "INFO").upper()
@@ -101,34 +124,26 @@ async def handle_request(server: ElsevierMCPServer, request: dict[str, Any]) -> 
         return None
 
     if method == "initialize":
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {
-                    "tools": {},
-                    "resources": {
-                        "subscribe": False,
-                        "listChanged": False,
-                    },
-                    "prompts": {
-                        "listChanged": False,
-                    },
+        return _jsonrpc_response(req_id, result={
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+                "tools": {},
+                "resources": {
+                    "subscribe": False,
+                    "listChanged": False,
                 },
-                "serverInfo": {
-                    "name": "elsevier-mcp-complete-server",
-                    "version": VERSION,
+                "prompts": {
+                    "listChanged": False,
                 },
             },
-        }
+            "serverInfo": {
+                "name": "elsevier-mcp-complete-server",
+                "version": VERSION,
+            },
+        })
 
     if method == "prompts/list":
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {"prompts": list(server.prompts.values())},
-        }
+        return _jsonrpc_response(req_id, result={"prompts": list(server.prompts.values())})
 
     if method == "prompts/get":
         prompt_name = request.get("params", {}).get("name", "")
@@ -136,58 +151,28 @@ async def handle_request(server: ElsevierMCPServer, request: dict[str, Any]) -> 
         if prompt_name in server.prompts:
             try:
                 result = await server.get_prompt(prompt_name, arguments)
-                return {
-                    "jsonrpc": "2.0",
-                    "id": req_id,
-                    "result": result,
-                }
+                return _jsonrpc_response(req_id, result=result)
             except Exception as exc:
-                return {
-                    "jsonrpc": "2.0",
-                    "id": req_id,
-                    "error": {"code": -32603, "message": str(exc)},
-                }
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "error": {"code": -32602, "message": f"Prompt not found: {prompt_name}"},
-        }
+                return _jsonrpc_response(req_id, error={"code": -32603, "message": str(exc)})
+        return _jsonrpc_response(req_id, error={"code": -32602, "message": f"Prompt not found: {prompt_name}"})
 
     if method == "resources/list":
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {"resources": server.resources},
-        }
+        return _jsonrpc_response(req_id, result={"resources": server.resources})
 
     if method == "resources/templates/list":
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {"resourceTemplates": server.resource_templates},
-        }
+        return _jsonrpc_response(req_id, result={"resourceTemplates": server.resource_templates})
 
     if method == "resources/read":
         uri = request.get("params", {}).get("uri", "")
         try:
             result = await server.read_resource(uri)
-            return {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "result": result,
-            }
+            return _jsonrpc_response(req_id, result=result)
         except ValueError as exc:
-            return {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "error": {"code": -32602, "message": str(exc)},
-            }
+            return _jsonrpc_response(req_id, error={"code": -32602, "message": str(exc)})
         except Exception as exc:
-            return {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "error": {"code": -32603, "message": f"Failed to read resource: {str(exc)}"},
-            }
+            return _jsonrpc_response(
+                req_id, error={"code": -32603, "message": f"Failed to read resource: {str(exc)}"}
+            )
 
     if method == "tools/list":
         tools_list = [
@@ -198,42 +183,32 @@ async def handle_request(server: ElsevierMCPServer, request: dict[str, Any]) -> 
             }
             for tool_def in server.tools.values()
         ]
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {"tools": tools_list},
-        }
+        return _jsonrpc_response(req_id, result={"tools": tools_list})
 
     if method == "tools/call":
         tool_name = request.get("params", {}).get("name", "")
         arguments = request.get("params", {}).get("arguments", {})
 
         if tool_name in server.tools:
-            handler = getattr(server, tool_name)
-            result = await handler(arguments)
-            return {
-                "jsonrpc": "2.0",
-                "id": req_id,
-                "result": {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": json.dumps(result, ensure_ascii=False, indent=2),
-                        }
-                    ]
-                },
-            }
-        return {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "error": {"code": -32601, "message": f"Tool not found: {tool_name}"},
-        }
+            try:
+                handler = getattr(server, tool_name)
+                result = await handler(arguments)
+            except Exception as exc:
+                logger.exception("tools/call handler %s raised unexpectedly", tool_name)
+                return _jsonrpc_response(
+                    req_id, error={"code": -32603, "message": f"Internal error in tool {tool_name}: {str(exc)}"}
+                )
+            return _jsonrpc_response(req_id, result={
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(result, ensure_ascii=False, indent=2),
+                    }
+                ]
+            })
+        return _jsonrpc_response(req_id, error={"code": -32601, "message": f"Tool not found: {tool_name}"})
 
-    return {
-        "jsonrpc": "2.0",
-        "id": req_id,
-        "error": {"code": -32601, "message": f"Method not found: {method}"},
-    }
+    return _jsonrpc_response(req_id, error={"code": -32601, "message": f"Method not found: {method}"})
 
 
 async def run_stdio() -> None:
