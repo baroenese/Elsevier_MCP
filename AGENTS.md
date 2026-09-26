@@ -24,7 +24,7 @@ MCP server exposing Elsevier academic APIs (Scopus search, SciVal journal metric
 - `apps/api/` — FastAPI backend service exposing REST endpoints (`health`, `search`, `abstract`, `trends`, `journals`).
 - `apps/web/` — Next.js 16 Web UI (App Router, Tailwind CSS v4, BFF Route Handlers).
 - `packages/ui/` — shared `@elsevier-mcp/ui` React components (`MetricTile`, `QuartileBadge`, etc.).
-- `research/`, `knowledge/` — research notes / deliverable reports (some in Bahasa Indonesia), not application code; don't mix them into package builds.
+- `research/` — research notes / deliverable reports (some in Bahasa Indonesia), not application code; don't mix them into package builds.
 - `nx.json`, `package.json`, `tsconfig.base.json` — Nx monorepo configuration.
 - `README.md` / `README_ja.md` (Japanese), `CHANGELOG.md` — must be updated together when tools or CLI behavior change.
 - `.agents/skills/elsevier-mcp-dev/SKILL.md` — detailed runbook for adding tools and testing JSON-RPC over stdio.
@@ -54,11 +54,11 @@ python packages/elsevier-mcp/test.py                                 # live endp
 - **Style**: PEP 8, 120-char lines, type hints + docstrings (Args/Returns/Raises) on all new functions and handlers. Tool names and code are English, but tool/parameter descriptions and docstrings in `_define_tools()` are written in Japanese — match that when adding tools.
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`). Branching: work happens on `lokal/develop`, merged to `main`.
 
-## Research notes (`knowledge/`, `research/`)
+## Research notes (`research/`)
 
 - Notes and deliverable reports may be written in Bahasa Indonesia; code, tool descriptions, and this file stay English.
-- Every note carries OK-style frontmatter (e.g. `description`/`tags`/`title`) — the OK workspace indexes the repo root as its content dir (`content.dir: .`).
-- Deliverable reports live in these folders and are mirrored into OK; never mix them into package builds or the PyPI output.
+- Every note carries OK-canonical frontmatter: `title`/`description`/`tags` (legacy files may still use other shapes — don't retrofit them). The OK workspace indexes the repo root as its content dir (`content.dir: .`).
+- Deliverable reports live in this folder and are mirrored into OK; never mix them into package builds or the PyPI output.
 
 ## Testing the stdio protocol manually
 
