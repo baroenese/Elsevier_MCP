@@ -3,10 +3,12 @@
 import json
 import os
 from typing import Any
+
+from elsevier_mcp.handlers import define_tools
 from fastapi import APIRouter
 from pydantic import BaseModel
-from elsevier_mcp.handlers import define_tools
-from app.config import CONFIG_FILE, CONFIG_DIR
+
+from app.config import CONFIG_DIR, CONFIG_FILE
 
 router = APIRouter(tags=["health"])
 

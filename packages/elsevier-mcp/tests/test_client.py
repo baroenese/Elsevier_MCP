@@ -1,6 +1,5 @@
 """Tests for ElsevierAPIClient and headers resolution."""
 
-import os
 import httpx
 import pytest
 import respx

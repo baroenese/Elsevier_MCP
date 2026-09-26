@@ -1,9 +1,11 @@
 """Papers search, abstract, and institution routes."""
 
 from typing import Any
+
+from elsevier_mcp.handlers import ToolHandlers
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from elsevier_mcp.handlers import ToolHandlers
+
 from app.dependencies import get_handlers
 
 router = APIRouter(tags=["papers"])

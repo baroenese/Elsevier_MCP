@@ -2,11 +2,12 @@
 
 import json
 from typing import Any
+
 import pytest
 import respx
 
 from elsevier_mcp.client import BASE_URL
-from elsevier_mcp.server import ElsevierMCPServer, VERSION, handle_request
+from elsevier_mcp.server import VERSION, ElsevierMCPServer, handle_request
 
 
 @pytest.mark.asyncio

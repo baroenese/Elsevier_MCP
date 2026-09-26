@@ -2,10 +2,12 @@
 
 from pathlib import Path
 from typing import Any
-import pytest
+
 import httpx
-from app.main import app
+import pytest
+
 from app.dependencies import get_handlers
+from app.main import app
 
 
 class MockToolHandlers:

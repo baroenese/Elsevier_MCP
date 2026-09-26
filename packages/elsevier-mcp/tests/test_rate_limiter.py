@@ -1,6 +1,5 @@
 """Tests for TokenBucketRateLimiter."""
 
-import asyncio
 import time
 
 import pytest

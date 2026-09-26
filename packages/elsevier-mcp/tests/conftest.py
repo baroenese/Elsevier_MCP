@@ -1,10 +1,9 @@
 """Pytest fixtures and sample data for the elsevier_mcp test suite."""
 
-import os
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import pytest
-import respx
 
 from elsevier_mcp.client import ElsevierAPIClient
 from elsevier_mcp.rate_limiter import TokenBucketRateLimiter

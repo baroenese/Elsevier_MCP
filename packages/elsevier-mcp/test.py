@@ -308,7 +308,7 @@ class ElsevierAPITester:
                 print("✅ 成功: 著者メトリクスを取得")
 
                 # メトリクスデータを分析
-                if "results" in data and data["results"]:
+                if data.get("results"):
                     author_data = data["results"][0]
                     metrics = author_data.get("metrics", [])
 

@@ -1,7 +1,7 @@
 """Pydantic input and output validation models for Elsevier MCP server tools."""
 
-from datetime import datetime
 import re
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -119,7 +119,7 @@ class AnalyzeResearchTrendsInput(BaseModel):
         for y in v:
             if y < 1900 or y > 2100:
                 raise ValueError(f"Year {y} is outside the acceptable range (1900-2100)")
-        return sorted(list(set(v)))
+        return sorted(set(v))
 
 
 class GetInstitutionPapersInput(BaseModel):

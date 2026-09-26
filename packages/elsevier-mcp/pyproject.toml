@@ -34,6 +34,7 @@ classifiers = [
 dev = [
   "pytest>=8.0.0",
   "pytest-asyncio>=0.24.0",
+  "pytest-cov>=5.0.0",
   "respx>=0.22.0",
   "ruff>=0.4.0",
 ]
@@ -54,6 +55,26 @@ py-modules = ["elsevier_mcp_complete"]
 [tool.ruff]
 line-length = 120
 
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "RUF"]
+# BLE001: blind `except Exception` is the project's error-dict convention
+# (handlers must never raise to the MCP caller). DTZ: naive local datetimes
+# are intentional for "current year" defaults. RUF001/2/3: Japanese
+# full-width characters in strings/docstrings are intentional.
+ignore = ["BLE001", "DTZ", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# Deprecation shim: the warning must be emitted before the re-exports run.
+"elsevier_mcp_complete.py" = ["E402"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.run]
+source = ["elsevier_mcp"]
+omit = ["elsevier_mcp_complete.py"]
+
+[tool.coverage.report]
+show_missing = true
+precision = 1

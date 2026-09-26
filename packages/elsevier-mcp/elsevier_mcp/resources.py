@@ -147,9 +147,10 @@ async def read_resource(uri: str, handlers: ToolHandlers) -> dict[str, Any]:
                 ]
             }
         error_msg = res.get("error", "Unknown error retrieving abstract")
+        text = f"# Error\n\nFailed to fetch paper `{eid}`: {error_msg}"
         return {
             "contents": [
-                {"uri": uri, "mimeType": "text/markdown", "text": f"# Error\n\nFailed to fetch paper `{eid}`: {error_msg}"}
+                {"uri": uri, "mimeType": "text/markdown", "text": text}
             ]
         }
 
@@ -186,9 +187,10 @@ async def read_resource(uri: str, handlers: ToolHandlers) -> dict[str, Any]:
                 ]
             }
         error_msg = res.get("error", "Unknown error analyzing trends")
+        text = f"# Error\n\nFailed to analyze trends for `{field}`: {error_msg}"
         return {
             "contents": [
-                {"uri": uri, "mimeType": "text/markdown", "text": f"# Error\n\nFailed to analyze trends for `{field}`: {error_msg}"}
+                {"uri": uri, "mimeType": "text/markdown", "text": text}
             ]
         }
 
@@ -223,7 +225,8 @@ async def read_resource(uri: str, handlers: ToolHandlers) -> dict[str, Any]:
                 f"| **CiteScore (Current)** | {cs.get('current') or 'N/A'} | {cs.get('year') or 'N/A'} |\n"
                 f"| **CiteScore (Tracker)** | {cs.get('tracker') or 'N/A'} | {cs.get('tracker_year') or 'N/A'} |\n"
                 f"| **SCImago Journal Rank (SJR)** | {sjr.get('value') or 'N/A'} | {sjr.get('year') or 'N/A'} |\n"
-                f"| **Source Normalized Impact (SNIP)** | {snip.get('value') or 'N/A'} | {snip.get('year') or 'N/A'} |\n\n"
+                f"| **Source Normalized Impact (SNIP)** | {snip.get('value') or 'N/A'} "
+                f"| {snip.get('year') or 'N/A'} |\n\n"
                 f"## 🏆 Subject Category Rankings & Quartiles\n\n"
                 f"| Subject Code | Rank | Percentile | Quartile |\n"
                 f"| :--- | :--- | :--- | :--- |\n"
@@ -235,9 +238,10 @@ async def read_resource(uri: str, handlers: ToolHandlers) -> dict[str, Any]:
                 ]
             }
         error_msg = res.get("error", "Journal not found")
+        text = f"# Error\n\nFailed to fetch journal metrics for `{query}`: {error_msg}"
         return {
             "contents": [
-                {"uri": uri, "mimeType": "text/markdown", "text": f"# Error\n\nFailed to fetch journal metrics for `{query}`: {error_msg}"}
+                {"uri": uri, "mimeType": "text/markdown", "text": text}
             ]
         }
 

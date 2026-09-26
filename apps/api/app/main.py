@@ -7,8 +7,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'packages' / 'elsev
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.config import load_config_into_env, settings
-from app.routers import health, papers, trends, journals
+from app.routers import health, journals, papers, trends
 
 load_config_into_env()
 

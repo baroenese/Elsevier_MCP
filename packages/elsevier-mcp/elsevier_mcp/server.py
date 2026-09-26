@@ -171,7 +171,7 @@ async def handle_request(server: ElsevierMCPServer, request: dict[str, Any]) -> 
             return _jsonrpc_response(req_id, error={"code": -32602, "message": str(exc)})
         except Exception as exc:
             return _jsonrpc_response(
-                req_id, error={"code": -32603, "message": f"Failed to read resource: {str(exc)}"}
+                req_id, error={"code": -32603, "message": f"Failed to read resource: {exc!s}"}
             )
 
     if method == "tools/list":
@@ -196,7 +196,7 @@ async def handle_request(server: ElsevierMCPServer, request: dict[str, Any]) -> 
             except Exception as exc:
                 logger.exception("tools/call handler %s raised unexpectedly", tool_name)
                 return _jsonrpc_response(
-                    req_id, error={"code": -32603, "message": f"Internal error in tool {tool_name}: {str(exc)}"}
+                    req_id, error={"code": -32603, "message": f"Internal error in tool {tool_name}: {exc!s}"}
                 )
             return _jsonrpc_response(req_id, result={
                 "content": [

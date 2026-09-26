@@ -13,14 +13,14 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "../../.venv/bin/pytest tests/ -v",
+        "command": "../../.venv/bin/pytest tests/ -v --cov=app --cov-report=term-missing",
         "cwd": "apps/api"
       }
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "../../.venv/bin/python3 -m compileall -q app tests",
+        "command": "../../.venv/bin/ruff check app tests",
         "cwd": "apps/api"
       }
     }

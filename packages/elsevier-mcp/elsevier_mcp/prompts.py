@@ -12,11 +12,17 @@ def define_prompts() -> dict[str, dict[str, Any]]:
     return {
         "systematic_literature_review": {
             "name": "systematic_literature_review",
-            "description": "Formulate a systematic literature review and comparative analysis on a research topic using Scopus search.",
+            "description": (
+                "Formulate a systematic literature review and comparative analysis on a research topic "
+                "using Scopus search."
+            ),
             "arguments": [
                 {
                     "name": "topic",
-                    "description": "The central research topic or technology to review (e.g., 'Transformer architectures in Computer Vision')",
+                    "description": (
+                        "The central research topic or technology to review "
+                        "(e.g., 'Transformer architectures in Computer Vision')"
+                    ),
                     "required": True,
                 },
                 {
@@ -33,7 +39,10 @@ def define_prompts() -> dict[str, dict[str, Any]]:
         },
         "paper_deep_dive": {
             "name": "paper_deep_dive",
-            "description": "Conduct a comprehensive critical appraisal of a specific paper (methodology, findings, limitations, citations).",
+            "description": (
+                "Conduct a comprehensive critical appraisal of a specific paper "
+                "(methodology, findings, limitations, citations)."
+            ),
             "arguments": [
                 {
                     "name": "paper_title_or_eid",
@@ -42,18 +51,25 @@ def define_prompts() -> dict[str, dict[str, Any]]:
                 },
                 {
                     "name": "analysis_depth",
-                    "description": "Depth of analysis: 'concise_summary', 'critical_appraisal', or 'methodology_breakdown'",
+                    "description": (
+                        "Depth of analysis: 'concise_summary', 'critical_appraisal', or 'methodology_breakdown'"
+                    ),
                     "required": False,
                 },
             ],
         },
         "research_trend_analysis": {
             "name": "research_trend_analysis",
-            "description": "Analyze research momentum, publication trajectory, and breakthrough developments in a scientific domain.",
+            "description": (
+                "Analyze research momentum, publication trajectory, and breakthrough developments "
+                "in a scientific domain."
+            ),
             "arguments": [
                 {
                     "name": "field",
-                    "description": "The research field or domain keyword (e.g., 'Quantum Computing', 'Federated Learning')",
+                    "description": (
+                        "The research field or domain keyword (e.g., 'Quantum Computing', 'Federated Learning')"
+                    ),
                     "required": True,
                 },
                 {
@@ -91,14 +107,17 @@ def get_prompt(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
             f"- Primary Focus: {focus}\n\n"
             f"Step-by-Step Instructions:\n"
             f'1. Use `search_papers` with queries targeting "{topic}" to identify landmark and high-impact papers.\n'
-            f"2. Use `get_paper_abstract` on the top retrieved papers to inspect their core methodologies, datasets, and claims.\n"
+            f"2. Use `get_paper_abstract` on the top retrieved papers to inspect their core methodologies, "
+            f"datasets, and claims.\n"
             f"3. Synthesize the findings into a rigorous academic report structured as follows:\n"
             f"   - **Executive Summary & Problem Statement**\n"
             f"   - **Taxonomy of Approaches**: Group papers into distinct conceptual paradigms.\n"
-            f"   - **Methodological Comparison Table**: Columns for Paper (Author, Year), Key Technique, Dataset/Benchmark, Strengths, Limitations.\n"
+            f"   - **Methodological Comparison Table**: Columns for Paper (Author, Year), Key Technique, "
+            f"Dataset/Benchmark, Strengths, Limitations.\n"
             f"   - **Critical Research Gaps & Open Challenges**: Identify what current literature fails to address.\n"
             f"   - **Promising Future Directions**\n"
-            f"4. Cite all referenced works using LaTeX citation markers (e.g., \\cite{{AuthorYear}} or direct DOI/EID links)."
+            f"4. Cite all referenced works using LaTeX citation markers "
+            f"(e.g., \\cite{{AuthorYear}} or direct DOI/EID links)."
         )
         return {
             "description": f"Systematic Literature Review on {topic}",
@@ -121,13 +140,16 @@ def get_prompt(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
             f'You are an academic reviewer conducting a deep-dive analysis on: "{target}".\n\n'
             f"Analysis Depth: {depth}\n\n"
             f"Instructions:\n"
-            f"1. Fetch the paper metadata and abstract using `get_paper_abstract` (or search for it with `search_papers` if only the title is provided).\n"
+            f"1. Fetch the paper metadata and abstract using `get_paper_abstract` "
+            f"(or search for it with `search_papers` if only the title is provided).\n"
             f"2. Provide a structured critical review with the following sections:\n"
             f"   - **Bibliographic Metadata**: Title, Authors, Journal/Venue, Year, DOI, Citation Count.\n"
             f"   - **Core Research Question & Hypotheses**\n"
-            f"   - **Methodology Breakdown**: Mathematical formulation, experimental setup, or algorithmic architecture.\n"
+            f"   - **Methodology Breakdown**: Mathematical formulation, experimental setup, "
+            f"or algorithmic architecture.\n"
             f"   - **Key Findings & Evidence**: What was empirically proven vs. claimed.\n"
-            f"   - **Threats to Validity & Limitations**: Unaddressed edge cases, dataset biases, or theoretical bounds.\n"
+            f"   - **Threats to Validity & Limitations**: Unaddressed edge cases, dataset biases, "
+            f"or theoretical bounds.\n"
             f"   - **Impact & Context**: How this work relates to subsequent research."
         )
         return {
@@ -150,7 +172,8 @@ def get_prompt(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         prompt_text = (
             f'You are a scientometrics expert evaluating research trends in: "{field}" over {timeframe}.\n\n'
             f"Instructions:\n"
-            f"1. Use `analyze_research_trends` and `search_papers` across target years to assess publication velocity.\n"
+            f"1. Use `analyze_research_trends` and `search_papers` across target years to assess publication "
+            f"velocity.\n"
             f"2. Identify the leading institutions publishing in this field using `get_institution_papers`.\n"
             f"3. Produce a structured trend report covering:\n"
             f"   - **Growth Trajectory**: Annual publication volume and compound annual growth rate (CAGR).\n"

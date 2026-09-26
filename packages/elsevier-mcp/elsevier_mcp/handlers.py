@@ -1,8 +1,9 @@
 """Tool handlers and Elsevier API integration logic."""
 
-from datetime import datetime
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from datetime import datetime
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, ValidationError
@@ -509,7 +510,10 @@ class ToolHandlers:
             return error
 
         assert params_input is not None
-        path = f"/content/abstract/eid/{params_input.eid}" if params_input.eid else f"/content/abstract/doi/{params_input.doi}"
+        if params_input.eid:
+            path = f"/content/abstract/eid/{params_input.eid}"
+        else:
+            path = f"/content/abstract/doi/{params_input.doi}"
 
         data, error = await self._fetch_json("get_paper_abstract", path)
         if error:
@@ -523,7 +527,11 @@ class ToolHandlers:
         abstract_text = (
             raw_abstract
             if raw_abstract and str(raw_abstract).strip() != "No abstract"
-            else "Full narrative abstract is not available in basic view. Access typically requires an institutional subscription (ELSEVIER_INSTTOKEN). You can view full article details and open access full-text via the DOI link."
+            else (
+                "Full narrative abstract is not available in basic view. Access typically requires an institutional "
+                "subscription (ELSEVIER_INSTTOKEN). You can view full article details and open access full-text via "
+                "the DOI link."
+            )
         )
 
         result = {
