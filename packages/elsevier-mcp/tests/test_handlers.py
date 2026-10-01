@@ -2,6 +2,7 @@
 
 from typing import Any
 
+import httpx
 import pytest
 import respx
 
@@ -313,3 +314,143 @@ async def test_get_journal_metrics_not_found(api_client: ElsevierAPIClient) -> N
     result = await handlers.get_journal_metrics({"title": "NonExistentJournalXYZ"})
     assert result["success"] is False
     assert "Journal not found" in result["error"]
+
+
+# ---------------------------------------------------------------------------
+# search_author_papers
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_search_author_papers_by_id(
+    api_client: ElsevierAPIClient,
+    sample_scopus_search_response: dict[str, Any],
+) -> None:
+    """Verify search_author_papers uses the exact AUTH-ID operator without wrapping."""
+    route = respx.get(f"{BASE_URL}/content/search/scopus").respond(
+        status_code=200, json=sample_scopus_search_response
+    )
+    handlers = ToolHandlers(client=api_client)
+
+    result = await handlers.search_author_papers({"author_id": "55239922200"})
+    assert result["success"] is True
+    assert result["author_id"] == "55239922200"
+
+    sent_query = route.calls[0].request.url.params["query"]
+    assert "AUTH-ID(55239922200)" in sent_query
+    assert "TITLE-ABS-KEY" not in sent_query
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_search_author_papers_by_name_with_affiliation(
+    api_client: ElsevierAPIClient,
+    sample_scopus_search_response: dict[str, Any],
+) -> None:
+    """Verify search_author_papers composes AUTH + AFFIL + PUBYEAR clauses."""
+    route = respx.get(f"{BASE_URL}/content/search/scopus").respond(
+        status_code=200, json=sample_scopus_search_response
+    )
+    handlers = ToolHandlers(client=api_client)
+
+    result = await handlers.search_author_papers(
+        {"author_name": "Wahono, Romi S.", "affiliation": "Universitas Indonesia", "year": "2024"}
+    )
+    assert result["success"] is True
+
+    sent_query = route.calls[0].request.url.params["query"]
+    assert 'AUTH("Wahono, Romi S.")' in sent_query
+    assert 'AFFIL("Universitas Indonesia")' in sent_query
+    assert "PUBYEAR = 2024" in sent_query
+
+
+@pytest.mark.asyncio
+async def test_search_author_papers_requires_author(api_client: ElsevierAPIClient) -> None:
+    """Verify search_author_papers rejects calls without author_id or author_name."""
+    handlers = ToolHandlers(client=api_client)
+    result = await handlers.search_author_papers({"count": 5})
+    assert result["success"] is False
+    assert "Validation error" in result["error"]
+
+
+# ---------------------------------------------------------------------------
+# find_author_candidates
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_find_author_candidates_groups_by_id(api_client: ElsevierAPIClient) -> None:
+    """Verify candidates are grouped by author ID and homonyms stay separate."""
+    entries = [
+        {
+            "dc:creator": "Wahono R. S.",
+            "authid": ["6701829689"],
+            "affiliation": [{"affilname": "Universitas Bina Nusantara"}],
+            "citedby-count": "10",
+            "prism:coverDate": "2015-01-01",
+        },
+        {
+            "dc:creator": "Wahono R. S.",
+            "authid": ["6701829689"],
+            "affiliation": [{"affilname": "Universitas Bina Nusantara"}],
+            "citedby-count": "5",
+            "prism:coverDate": "2016-02-02",
+        },
+        {
+            "dc:creator": "Wahono S. K.",
+            "affiliation": [{"affilname": "Universitas Gadjah Mada"}],
+            "citedby-count": "30",
+            "prism:coverDate": "2013-03-03",
+        },
+    ]
+    response = {"search-results": {"opensearch:totalResults": "3", "entry": entries}}
+    route = respx.get(f"{BASE_URL}/content/search/scopus").respond(status_code=200, json=response)
+    handlers = ToolHandlers(client=api_client)
+
+    result = await handlers.find_author_candidates({"author_name": "Wahono, R S"})
+    assert result["success"] is True
+    assert result["total_results"] == 3
+    assert len(result["candidates"]) == 2
+
+    by_id = next(c for c in result["candidates"] if c["author_id"] == "6701829689")
+    assert by_id["document_count"] == 2
+    assert by_id["latest_year"] == "2016"
+    assert "Universitas Bina Nusantara" in by_id["affiliations"]
+
+    homonym = next(c for c in result["candidates"] if c["author_id"] is None)
+    assert homonym["name"] == "Wahono S. K."
+    assert homonym["document_count"] == 1
+
+    assert "authid" in route.calls[0].request.url.params["field"]
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_find_author_candidates_falls_back_without_field(api_client: ElsevierAPIClient) -> None:
+    """Verify the retry without field selection when the API rejects it."""
+    response = {
+        "search-results": {
+            "opensearch:totalResults": "1",
+            "entry": [
+                {
+                    "dc:creator": "Wahono R. S.",
+                    "affiliation": [{"affilname": "Binus"}],
+                    "prism:coverDate": "2015-05-05",
+                }
+            ],
+        }
+    }
+    route = respx.get(f"{BASE_URL}/content/search/scopus")
+    route.side_effect = [httpx.Response(400, json={"error": "bad field"}), httpx.Response(200, json=response)]
+    handlers = ToolHandlers(client=api_client)
+
+    result = await handlers.find_author_candidates({"author_name": "Wahono, R S"})
+    assert result["success"] is True
+    assert len(result["candidates"]) == 1
+    assert result["candidates"][0]["author_id"] is None
+    assert "note" in result
+
+    assert len(route.calls) == 2
+    assert "field" not in route.calls[1].request.url.params

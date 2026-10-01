@@ -12,10 +12,12 @@ from pydantic import BaseModel
 from elsevier_mcp.handlers import define_tools
 from elsevier_mcp.schemas import (
     AnalyzeResearchTrendsInput,
+    FindAuthorCandidatesInput,
     GetAuthorInfoInput,
     GetInstitutionPapersInput,
     GetJournalMetricsInput,
     GetPaperAbstractInput,
+    SearchAuthorPapersInput,
     SearchOpenAccessPapersInput,
     SearchPapersInput,
 )
@@ -30,6 +32,8 @@ MODEL_BY_TOOL = {
     "get_institution_papers": GetInstitutionPapersInput,
     "search_open_access_papers": SearchOpenAccessPapersInput,
     "get_journal_metrics": GetJournalMetricsInput,
+    "search_author_papers": SearchAuthorPapersInput,
+    "find_author_candidates": FindAuthorCandidatesInput,
 }
 
 

@@ -41,6 +41,26 @@ def strip_non_empty(value: str, field_name: str) -> str:
 SORT_KEYS = ("citedby-count", "-citedby-count", "coverdate", "-coverdate", "relevancy")
 
 
+def _validate_year_string(v: str | None) -> str | None:
+    """Validate an optional YYYY publication-year string (shared validator body)."""
+    if v is not None and v.strip():
+        v_str = v.strip()
+        if not re.match(r"^\d{4}$", v_str):
+            raise ValueError("Year must be a 4-digit year (YYYY)")
+        return v_str
+    return None
+
+
+def _validate_sort_string(v: str | None) -> str | None:
+    """Validate an optional Scopus sort key (shared validator body)."""
+    if v is None or not v.strip():
+        return None
+    v = v.strip()
+    if v not in SORT_KEYS:
+        raise ValueError(f"sort must be one of: {', '.join(SORT_KEYS)}")
+    return v
+
+
 class SearchPapersInput(BaseModel):
     """Input parameters for search_papers tool."""
 
@@ -57,27 +77,17 @@ class SearchPapersInput(BaseModel):
     )
     sort: str | None = Field(default=None, description=f"Sort order, one of: {', '.join(SORT_KEYS)}")
 
-    @field_validator("sort")
-    @classmethod
-    def validate_sort(cls, v: str | None) -> str | None:
-        """Restrict sort to the Scopus-supported sort keys."""
-        if v is None or not v.strip():
-            return None
-        v = v.strip()
-        if v not in SORT_KEYS:
-            raise ValueError(f"sort must be one of: {', '.join(SORT_KEYS)}")
-        return v
-
     @field_validator("year")
     @classmethod
     def validate_year(cls, v: str | None) -> str | None:
         """Validate that publication year is in YYYY format."""
-        if v is not None and v.strip():
-            v_str = v.strip()
-            if not re.match(r"^\d{4}$", v_str):
-                raise ValueError("Year must be a 4-digit year (YYYY)")
-            return v_str
-        return None
+        return _validate_year_string(v)
+
+    @field_validator("sort")
+    @classmethod
+    def validate_sort(cls, v: str | None) -> str | None:
+        """Restrict sort to the Scopus-supported sort keys."""
+        return _validate_sort_string(v)
 
 
 class GetPaperAbstractInput(BaseModel):
@@ -112,6 +122,85 @@ class GetAuthorInfoInput(BaseModel):
     def strip_id(cls, v: str) -> str:
         """Strip surrounding whitespace from author_id."""
         return strip_non_empty(v, "author_id")
+
+
+class SearchAuthorPapersInput(BaseModel):
+    """Input parameters for search_author_papers tool."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    author_id: str | None = Field(default=None, description="Scopus Author ID (exact match, preferred)")
+    author_name: str | None = Field(
+        default=None, description='Author name in "Surname, Initials" format (prone to homonym collisions)'
+    )
+    affiliation: str | None = Field(default=None, description="Institution name to narrow the author down")
+    count: int = Field(default=10, ge=1, le=25, description="Number of results to retrieve (1-25)")
+    year: str | None = Field(default=None, description="Publication year in YYYY format")
+    start: int = Field(default=0, ge=0, le=5999, description="Result offset for pagination (0-based)")
+    sort: str | None = Field(default=None, description=f"Sort order, one of: {', '.join(SORT_KEYS)}")
+
+    @field_validator("author_id")
+    @classmethod
+    def strip_author_id(cls, v: str | None) -> str | None:
+        """Strip surrounding whitespace from author_id."""
+        return strip_non_empty(v, "author_id") if v and v.strip() else None
+
+    @field_validator("author_name")
+    @classmethod
+    def strip_author_name(cls, v: str | None) -> str | None:
+        """Strip surrounding whitespace from author_name."""
+        return strip_non_empty(v, "author_name") if v and v.strip() else None
+
+    @field_validator("affiliation")
+    @classmethod
+    def strip_affiliation(cls, v: str | None) -> str | None:
+        """Strip surrounding whitespace from affiliation."""
+        return strip_non_empty(v, "affiliation") if v and v.strip() else None
+
+    @field_validator("year")
+    @classmethod
+    def validate_year(cls, v: str | None) -> str | None:
+        """Validate that publication year is in YYYY format."""
+        return _validate_year_string(v)
+
+    @field_validator("sort")
+    @classmethod
+    def validate_sort(cls, v: str | None) -> str | None:
+        """Restrict sort to the Scopus-supported sort keys."""
+        return _validate_sort_string(v)
+
+    @model_validator(mode="after")
+    def validate_author_specified(self) -> "SearchAuthorPapersInput":
+        """Ensure either author_id or author_name is specified."""
+        if not self.author_id and not self.author_name:
+            raise ValueError("Either 'author_id' or 'author_name' must be provided")
+        return self
+
+
+class FindAuthorCandidatesInput(BaseModel):
+    """Input parameters for find_author_candidates tool."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    author_name: str = Field(
+        ...,
+        min_length=1,
+        description='Author name to disambiguate, in "Surname, Initials" format',
+    )
+    affiliation: str | None = Field(default=None, description="Institution name to narrow candidates down")
+    count: int = Field(default=25, ge=1, le=25, description="Number of papers to sample for grouping (1-25)")
+
+    @field_validator("author_name")
+    @classmethod
+    def strip_author_name(cls, v: str) -> str:
+        """Strip surrounding whitespace from author_name."""
+        return strip_non_empty(v, "author_name")
+
+    @field_validator("affiliation")
+    @classmethod
+    def strip_affiliation(cls, v: str | None) -> str | None:
+        """Strip surrounding whitespace from affiliation."""
+        return strip_non_empty(v, "affiliation") if v and v.strip() else None
 
 
 class AnalyzeResearchTrendsInput(BaseModel):

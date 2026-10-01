@@ -11,10 +11,12 @@ from pydantic import BaseModel, ValidationError
 from elsevier_mcp.client import ElsevierAPIClient
 from elsevier_mcp.schemas import (
     AnalyzeResearchTrendsInput,
+    FindAuthorCandidatesInput,
     GetAuthorInfoInput,
     GetInstitutionPapersInput,
     GetJournalMetricsInput,
     GetPaperAbstractInput,
+    SearchAuthorPapersInput,
     SearchOpenAccessPapersInput,
     SearchPapersInput,
 )
@@ -72,6 +74,7 @@ def _validated(
 FIELD_CODES = (
     "TITLE-ABS-KEY(",
     "AUTH(",
+    "AUTH-ID(",
     "AUTHOR-NAME(",
     "AFFIL(",
     "AFFILORG(",
@@ -273,6 +276,105 @@ def _parse_subject_rankings(citescore_info: dict[str, Any]) -> tuple[list[dict[s
     return subject_rankings, best_quartile
 
 
+def _entry_affiliation_names(entry: dict[str, Any]) -> list[str]:
+    """Extract affiliation names from a Scopus search entry.
+
+    Args:
+        entry: Scopus search result entry dictionary.
+
+    Returns:
+        List of distinct affiliation names (possibly empty).
+    """
+    raw = entry.get("affiliation")
+    items: list[Any]
+    if isinstance(raw, list):
+        items = raw
+    elif isinstance(raw, dict):
+        items = [raw]
+    else:
+        items = []
+    names: list[str] = []
+    for item in items:
+        if isinstance(item, dict):
+            name = item.get("affilname")
+            if name and name not in names:
+                names.append(str(name))
+    return names
+
+
+def _entry_author_ids(entry: dict[str, Any]) -> list[str]:
+    """Extract Scopus author IDs from a search entry when present.
+
+    Author IDs appear under ``authid`` (field-selected responses) or inside the
+    ``author`` list entries; the STANDARD view often omits them entirely.
+
+    Args:
+        entry: Scopus search result entry dictionary.
+
+    Returns:
+        List of distinct author IDs as strings.
+    """
+    ids: list[str] = []
+    raw_ids = entry.get("authid")
+    if isinstance(raw_ids, list):
+        ids.extend(str(x) for x in raw_ids if x)
+    elif isinstance(raw_ids, (str, int)) and raw_ids:
+        ids.append(str(raw_ids))
+    authors = entry.get("author")
+    if isinstance(authors, list):
+        for a in authors:
+            if isinstance(a, dict) and a.get("authid"):
+                authid = str(a["authid"])
+                if authid not in ids:
+                    ids.append(authid)
+    return ids
+
+
+def group_author_candidates(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Group Scopus search entries into distinct author candidates.
+
+    Mitigates homonym contamination: entries are grouped by author ID when the
+    response carries one, otherwise by creator name + affiliation combination.
+
+    Args:
+        entries: Scopus search result entries.
+
+    Returns:
+        Candidate dicts with ``author_id`` (None when unavailable), ``name``,
+        ``affiliations``, ``document_count``, and ``latest_year``.
+    """
+    grouped: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        creator = entry.get("dc:creator", "Unknown")
+        affils = _entry_affiliation_names(entry)
+        affil_key = "; ".join(affils) if affils else ""
+        author_ids = _entry_author_ids(entry)
+        key = f"id:{author_ids[0]}" if author_ids else f"name:{creator}|{affil_key}"
+
+        candidate = grouped.setdefault(
+            key,
+            {
+                "author_id": author_ids[0] if author_ids else None,
+                "name": creator,
+                "affiliations": [],
+                "document_count": 0,
+                "latest_year": None,
+            },
+        )
+        candidate["document_count"] += 1
+        for name in affils:
+            if name not in candidate["affiliations"]:
+                candidate["affiliations"].append(name)
+        cover_date = str(entry.get("prism:coverDate", "") or "")
+        year = cover_date[:4] if cover_date else None
+        if year and (candidate["latest_year"] is None or year > candidate["latest_year"]):
+            candidate["latest_year"] = year
+
+    return sorted(grouped.values(), key=lambda c: c["document_count"], reverse=True)
+
+
 def define_tools() -> dict[str, dict[str, Any]]:
     """Define available MCP tools and their input schemas compliant with MCP specification.
 
@@ -425,6 +527,80 @@ def define_tools() -> dict[str, dict[str, Any]]:
                         "description": "ジャーナルのISSNまたはE-ISSN（例: '0885-6125', '0028-0836'）",
                     },
                 },
+            },
+        },
+        "search_author_papers": {
+            "name": "search_author_papers",
+            "description": (
+                "特定著者の論文をScopus一般検索（AUTH-ID/AUTH演算子）で取得します。"
+                "著者検索エンドポイントが利用できないAPIキーでも動作します。"
+                "同姓同名（ホモニム）の混入に注意し、可能なら author_id を使用してください。"
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "author_id": {
+                        "type": "string",
+                        "description": "Scopus著者ID（完全一致・推奨、例: '55239922200'）",
+                    },
+                    "author_name": {
+                        "type": "string",
+                        "description": "著者名（'姓, イニシャル'形式、例: 'Wahono, Romi S.'）。同姓同名の混入に注意",
+                    },
+                    "affiliation": {
+                        "type": "string",
+                        "description": "著者を絞り込む所属機関名（例: 'Universitas Indonesia'）",
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "取得件数（最大25）",
+                        "minimum": 1,
+                        "maximum": 25,
+                    },
+                    "year": {
+                        "type": "string",
+                        "description": "発行年（YYYY形式）",
+                    },
+                    "start": {
+                        "type": "integer",
+                        "description": "取得開始位置（0始まりのページング用オフセット、最大5999）",
+                        "minimum": 0,
+                        "maximum": 5999,
+                    },
+                    "sort": {
+                        "type": "string",
+                        "description": "ソート順（デフォルト: citedby-count）",
+                        "enum": ["citedby-count", "-citedby-count", "coverdate", "-coverdate", "relevancy"],
+                    },
+                },
+            },
+        },
+        "find_author_candidates": {
+            "name": "find_author_candidates",
+            "description": (
+                "著者名からScopus著者IDの候補を特定します。同名著者（ホモニム）の"
+                "混入を防ぐため、一般検索結果を著者ID・所属機関ごとにグループ化して"
+                "候補一覧を返します。search_author_papers や get_author_info の前に使用してください。"
+            ),
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "author_name": {
+                        "type": "string",
+                        "description": "識別する著者名（'姓, イニシャル'形式、例: 'Wahono, R S'）",
+                    },
+                    "affiliation": {
+                        "type": "string",
+                        "description": "候補を絞り込む所属機関名（例: 'Universitas Indonesia'）",
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "グループ化のためにサンプリングする論文数（最大25）",
+                        "minimum": 1,
+                        "maximum": 25,
+                    },
+                },
+                "required": ["author_name"],
             },
         },
     }
@@ -793,3 +969,111 @@ class ToolHandlers:
             "subject_rankings": subject_rankings,
         }
         return {"success": True, "journal": result}
+
+    async def search_author_papers(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """著者別論文検索 (Search papers by author via the general search endpoint).
+
+        Uses ``AUTH-ID(...)`` for exact author matches, or ``AUTH("...")`` with an
+        optional affiliation filter. Avoids the author-retrieval endpoint, which is
+        not entitled on all API keys.
+
+        Args:
+            arguments: Tool arguments with author_id or author_name, plus optional
+                affiliation, count, year, start, and sort.
+
+        Returns:
+            Dict containing success status, paper items, total count, and the
+            resolved Scopus query.
+        """
+        params_input, error = _validated(SearchAuthorPapersInput, arguments)
+        if error:
+            return error
+
+        assert params_input is not None
+        author_clause = (
+            f"AUTH-ID({params_input.author_id})"
+            if params_input.author_id
+            else f'AUTH("{params_input.author_name}")'
+        )
+        query = build_scopus_query(
+            author_clause, year=params_input.year, institution=params_input.affiliation
+        )
+        params: dict[str, Any] = {
+            "query": query,
+            "count": min(params_input.count, 25),
+            "start": params_input.start,
+            "sort": params_input.sort or "citedby-count",
+        }
+
+        data, error = await self._fetch_json("search_author_papers", "/content/search/scopus", params=params)
+        if error:
+            return error
+
+        assert data is not None
+        entries = data.get("search-results", {}).get("entry", [])
+        total = _parse_total_results(data)
+        results = [parse_paper_entry(entry) for entry in entries]
+        return {
+            "success": True,
+            "total_results": total,
+            "start": params_input.start,
+            "author_id": params_input.author_id,
+            "author_name": params_input.author_name,
+            "papers": results,
+            "query": query,
+        }
+
+    async def find_author_candidates(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """著者候補特定 (Disambiguate author name into distinct Scopus author candidates).
+
+        Samples general-search results for ``AUTH("name")`` and groups them by
+        author ID (when the response carries one) or by creator name + affiliation,
+        to expose homonym collisions before any per-author analysis.
+
+        Args:
+            arguments: Tool arguments with author_name, optional affiliation and count.
+
+        Returns:
+            Dict containing success status, the query used, and a candidate list
+            sorted by sampled document count.
+        """
+        params_input, error = _validated(FindAuthorCandidatesInput, arguments)
+        if error:
+            return error
+
+        assert params_input is not None
+        query = build_scopus_query(
+            f'AUTH("{params_input.author_name}")', institution=params_input.affiliation
+        )
+        base_params: dict[str, Any] = {
+            "query": query,
+            "count": min(params_input.count, 25),
+            "sort": "citedby-count",
+        }
+
+        # Request author IDs explicitly; some entitlements reject unknown fields,
+        # so fall back to the default field set and group by name + affiliation.
+        params = {**base_params, "field": "dc:creator,authid,affilname,prism:coverDate"}
+        data, error = await self._fetch_json("find_author_candidates", "/content/search/scopus", params=params)
+        field_selection_supported = error is None
+        if error:
+            data, error = await self._fetch_json(
+                "find_author_candidates", "/content/search/scopus", params=base_params
+            )
+        if error:
+            return error
+
+        assert data is not None
+        entries = data.get("search-results", {}).get("entry", [])
+        total = _parse_total_results(data)
+        candidates = group_author_candidates(entries)
+        result: dict[str, Any] = {
+            "success": True,
+            "total_results": total,
+            "author_name": params_input.author_name,
+            "query": query,
+            "candidates": candidates,
+        }
+        if not field_selection_supported:
+            result["note"] = "field selection rejected by the API; candidates grouped by creator name and affiliation"
+        return result

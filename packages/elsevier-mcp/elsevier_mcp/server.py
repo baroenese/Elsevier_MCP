@@ -97,6 +97,14 @@ class ElsevierMCPServer:
         """Retrieve journal metrics."""
         return await self.handlers.get_journal_metrics(arguments)
 
+    async def search_author_papers(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Search papers by Scopus author."""
+        return await self.handlers.search_author_papers(arguments)
+
+    async def find_author_candidates(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        """Disambiguate an author name into candidate Scopus author IDs."""
+        return await self.handlers.find_author_candidates(arguments)
+
     async def get_prompt(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Generate prompt contents."""
         return get_prompt(name, arguments)

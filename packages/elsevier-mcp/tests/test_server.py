@@ -37,13 +37,13 @@ async def test_handle_notifications_ignored(server: ElsevierMCPServer) -> None:
 
 @pytest.mark.asyncio
 async def test_handle_tools_list(server: ElsevierMCPServer) -> None:
-    """Verify tools/list exposes all 7 tools with schemas."""
+    """Verify tools/list exposes all 9 tools with schemas."""
     req = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
     resp = await handle_request(server, req)
     assert resp is not None
     tools = resp["result"]["tools"]
     tool_names = [t["name"] for t in tools]
-    assert len(tools) == 7
+    assert len(tools) == 9
     assert "search_papers" in tool_names
     assert "get_paper_abstract" in tool_names
     assert "get_author_info" in tool_names
@@ -51,6 +51,8 @@ async def test_handle_tools_list(server: ElsevierMCPServer) -> None:
     assert "get_institution_papers" in tool_names
     assert "search_open_access_papers" in tool_names
     assert "get_journal_metrics" in tool_names
+    assert "search_author_papers" in tool_names
+    assert "find_author_candidates" in tool_names
 
 
 @pytest.mark.asyncio
