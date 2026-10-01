@@ -11,8 +11,6 @@ CONFIG_FILE = CONFIG_DIR / 'config.json'
 class Settings(BaseSettings):
     """Application settings."""
     cors_origins: list[str] = ["*"]
-    api_host: str = "127.0.0.1"
-    api_port: int = 8000
 
 def load_config_into_env():
     """Load API key and insttoken from config file into environment variables."""

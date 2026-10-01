@@ -124,10 +124,8 @@ export const api = {
 
   health: () => apiFetch<HealthResult>('/api/health'),
 
-  config: (body?: { api_key?: string; insttoken?: string }) =>
-    body
-      ? apiFetch<HealthResult>('/api/config', jsonPost(body))
-      : apiFetch<HealthResult>('/api/config'),
+  config: (body: { api_key?: string; insttoken?: string }) =>
+    apiFetch<HealthResult>('/api/config', jsonPost(body)),
 
   tools: () =>
     apiFetch<{ success: boolean; tools: ToolDef[] }>('/api/tools'),
