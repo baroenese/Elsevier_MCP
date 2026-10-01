@@ -36,8 +36,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configured Nx task targets for testing, linting, building, and serving across Python and TypeScript projects.
 - Comprehensive automated test suite with unified `npx nx run-many -t test` spanning 68 tests across all 4 packages.
 - Frontend unit test suite in `apps/web/tests/` running on Node 24 native test runner (`node:test`).
+- Root-segment App Router files for `apps/web`: global error boundary (`error.tsx`) with retry, route-transition loading skeleton (`loading.tsx`), and 404 page (`not-found.tsx`).
+- Package-specific `packages/elsevier-mcp/README.md`; `MANIFEST.in` trimmed to files that actually exist in the package directory.
+- Version drift guard test locking `server.VERSION` to the pyproject `[project].version`.
+- Verified Romi Satria Wahono bibliography deliverables in `research/` (57 cross-validated publications, 2000–2026, with per-work CSV).
+
+### Changed
+- Dropped the unused `mcp>=1.0.0` dependency (the stdio JSON-RPC protocol is hand-rolled); `requirements.txt` synced.
+- `.env` template renamed to `.env.example` and unignored (the `.env.*` ignore rule previously made it uncommittable).
+- Dev runbook `.agents/skills/elsevier-mcp-dev/SKILL.md` refreshed to the monorepo layout (five-step tool workflow, shared helpers, live-tested API-key entitlement limits); AGENTS.md no longer claims PyPI distribution.
 
 ### Fixed
+- Package build (`nx build elsevier-mcp`, release workflow) no longer fails: pyproject referenced a `README.md` and `MANIFEST.in` referenced `README_ja.md`/`LICENSE`/`example_mcp_config.json`/`examples/` that did not exist inside `packages/elsevier-mcp/`.
+- `apps/api` `sys.path` fallback now resolves to the repository root instead of the nonexistent `apps/packages/elsevier-mcp` (imports only worked via the venv editable install).
+- Removed dead code: GET branch of the `/api/config` BFF route (FastAPI only defines POST, so it would 405), no-arg `api.config()` branch in the web api-client, unused `/api/py/:path*` Next.js rewrite, unused `api_host`/`api_port` settings fields.
 - Fixed author metadata parsing in `get_paper_abstract` and `parse_paper_entry` to correctly handle nested Scopus dictionary and array structures (`_parse_author_names`), preventing React object rendering exceptions.
 - Added comprehensive edge-case unit tests for `_parse_author_names`.
 
