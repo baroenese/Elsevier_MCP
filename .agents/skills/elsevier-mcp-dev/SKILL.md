@@ -73,10 +73,17 @@ arithmetic:
 total = int(data.get('search-results', {}).get('opensearch:totalResults', 0))
 ```
 
-### Known API-key entitlement limits (live-verified)
+### Known API-key entitlement limits (live-verified 2026-10-01)
 
-- Author retrieval (`/content/author/...`) and `view=COMPLETE` return **401** with the current key;
-  author data must come from general search (`AUTH(...)`) or the SciVal author analytics endpoint.
+- Author retrieval (`/content/author/...`) and `view=COMPLETE` return **401**; the SciVal
+  author analytics endpoint (`/analytics/scival/author/...`, used by `get_author_info`)
+  returns **403 ENTITLEMENTS_ERROR** — the tool returns an error dict on this key.
+- Citation overview (`/content/abstract/citations`) → **403**: no citation-overview tool.
+- ScienceDirect Article Retrieval (`/content/article`) → **403**: no full-text tool.
+- General search rejects `AUTH-ID(...)` with **400 INVALID_INPUT** ("Error translating query");
+  use `AUTH("Surname, Initials")` plus an `AFFIL(...)` filter instead. `field=authid` is
+  accepted but author IDs are silently dropped from the response, so
+  `find_author_candidates` groups by creator name + affiliation on this key.
 - `SJR`/`SNIP` come from `serial/title?view=STANDARD`; CiteScore from `view=CITESCORE`.
 
 ---

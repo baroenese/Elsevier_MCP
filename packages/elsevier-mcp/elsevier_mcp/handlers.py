@@ -534,7 +534,8 @@ def define_tools() -> dict[str, dict[str, Any]]:
             "description": (
                 "特定著者の論文をScopus一般検索（AUTH-ID/AUTH演算子）で取得します。"
                 "著者検索エンドポイントが利用できないAPIキーでも動作します。"
-                "同姓同名（ホモニム）の混入に注意し、可能なら author_id を使用してください。"
+                "AUTH-ID を INVALID_INPUT で拒否するAPIキーでは author_name と affiliation を使用してください。"
+                "同姓同名（ホモニム）の混入に注意し、事前に find_author_candidates での確認を推奨します。"
             ),
             "inputSchema": {
                 "type": "object",
@@ -578,9 +579,9 @@ def define_tools() -> dict[str, dict[str, Any]]:
         "find_author_candidates": {
             "name": "find_author_candidates",
             "description": (
-                "著者名からScopus著者IDの候補を特定します。同名著者（ホモニム）の"
-                "混入を防ぐため、一般検索結果を著者ID・所属機関ごとにグループ化して"
-                "候補一覧を返します。search_author_papers や get_author_info の前に使用してください。"
+                "著者名から著者候補を特定し、同名著者（ホモニム）の混入を防ぎます。"
+                "一般検索結果を著者ID（APIキーが返す場合）または著者名・所属機関ごとに"
+                "グループ化して候補一覧を返します。search_author_papers の前に使用してください。"
             ),
             "inputSchema": {
                 "type": "object",
