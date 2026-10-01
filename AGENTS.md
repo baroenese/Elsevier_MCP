@@ -11,7 +11,7 @@ title: AGENTS.md — Elsevier MCP Server Instructions
 
 ## Purpose
 
-MCP server exposing Elsevier academic APIs (Scopus search, SciVal journal metrics, Abstract Retrieval) over JSON-RPC 2.0 stdio. Published as the `elsevier-mcp-server` PyPI package (Python 3.10+, MIT).
+MCP server exposing Elsevier academic APIs (Scopus search, SciVal journal metrics, Abstract Retrieval) over JSON-RPC 2.0 stdio. Distributed from this repository as the `elsevier-mcp-server` package (Python 3.10+, MIT); not yet published to PyPI.
 
 ## Layout — Nx monorepo architecture
 
@@ -60,7 +60,7 @@ python packages/elsevier-mcp/test.py                                 # live endp
 
 - Notes and deliverable reports may be written in Bahasa Indonesia; code, tool descriptions, and this file stay English.
 - Every note carries OK-canonical frontmatter: `title`/`description`/`tags` (legacy files may still use other shapes — don't retrofit them). The OK workspace indexes the repo root as its content dir (`content.dir: .`).
-- Deliverable reports live in this folder and are mirrored into OK; never mix them into package builds or the PyPI output.
+- Deliverable reports live in this folder and are mirrored into OK; never mix them into package builds or release artifacts.
 
 ## Testing the stdio protocol manually
 
