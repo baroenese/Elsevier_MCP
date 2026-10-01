@@ -38,6 +38,9 @@ def strip_non_empty(value: str, field_name: str) -> str:
     return s
 
 
+SORT_KEYS = ("citedby-count", "-citedby-count", "coverdate", "-coverdate", "relevancy")
+
+
 class SearchPapersInput(BaseModel):
     """Input parameters for search_papers tool."""
 
@@ -46,6 +49,24 @@ class SearchPapersInput(BaseModel):
     query: str = Field(..., min_length=1, description="Search keyword or Scopus advanced query")
     count: int = Field(default=10, ge=1, le=25, description="Number of results to retrieve (1-25)")
     year: str | None = Field(default=None, description="Publication year in YYYY format")
+    start: int = Field(
+        default=0,
+        ge=0,
+        le=5999,
+        description="Result offset for pagination (0-based; Scopus caps retrieval at the first 6000 results)",
+    )
+    sort: str | None = Field(default=None, description=f"Sort order, one of: {', '.join(SORT_KEYS)}")
+
+    @field_validator("sort")
+    @classmethod
+    def validate_sort(cls, v: str | None) -> str | None:
+        """Restrict sort to the Scopus-supported sort keys."""
+        if v is None or not v.strip():
+            return None
+        v = v.strip()
+        if v not in SORT_KEYS:
+            raise ValueError(f"sort must be one of: {', '.join(SORT_KEYS)}")
+        return v
 
     @field_validator("year")
     @classmethod

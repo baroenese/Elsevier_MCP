@@ -300,6 +300,17 @@ def define_tools() -> dict[str, dict[str, Any]]:
                         "type": "string",
                         "description": "発行年（YYYY形式）",
                     },
+                    "start": {
+                        "type": "integer",
+                        "description": "取得開始位置（0始まりのページング用オフセット、最大5999）",
+                        "minimum": 0,
+                        "maximum": 5999,
+                    },
+                    "sort": {
+                        "type": "string",
+                        "description": "ソート順（デフォルト: citedby-count）",
+                        "enum": ["citedby-count", "-citedby-count", "coverdate", "-coverdate", "relevancy"],
+                    },
                 },
                 "required": ["query"],
             },
@@ -461,13 +472,13 @@ class ToolHandlers:
             return None, {"success": False, "error": str(exc)}
 
     async def search_papers(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        """論文検索 (Search Scopus papers by query, count, and year).
+        """論文検索 (Search Scopus papers by query, count, year, offset, and sort order).
 
         Args:
-            arguments: Tool arguments containing query, optional count and year.
+            arguments: Tool arguments containing query, optional count, year, start, and sort.
 
         Returns:
-            Dict containing success status, paper items, and total count.
+            Dict containing success status, paper items, total count, and the requested offset.
         """
         params_input, error = _validated(SearchPapersInput, arguments)
         if error:
@@ -478,7 +489,8 @@ class ToolHandlers:
         params = {
             "query": search_query,
             "count": min(params_input.count, 25),
-            "sort": "citedby-count",
+            "start": params_input.start,
+            "sort": params_input.sort or "citedby-count",
         }
 
         data, error = await self._fetch_json("search_papers", "/content/search/scopus", params=params)
@@ -492,6 +504,7 @@ class ToolHandlers:
         return {
             "success": True,
             "total_results": total,
+            "start": params_input.start,
             "papers": results,
             "query": params_input.query,
         }

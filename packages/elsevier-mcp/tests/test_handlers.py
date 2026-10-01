@@ -125,6 +125,58 @@ async def test_search_papers_validation_error(api_client: ElsevierAPIClient) -> 
 
 @pytest.mark.asyncio
 @respx.mock
+async def test_search_papers_pagination_and_sort(
+    api_client: ElsevierAPIClient,
+    sample_scopus_search_response: dict[str, Any],
+) -> None:
+    """Verify search_papers forwards start/sort to the API and echoes the offset."""
+    route = respx.get(f"{BASE_URL}/content/search/scopus").respond(
+        status_code=200, json=sample_scopus_search_response
+    )
+    handlers = ToolHandlers(client=api_client)
+
+    result = await handlers.search_papers({"query": "transformers", "start": 25, "sort": "-coverdate"})
+    assert result["success"] is True
+    assert result["start"] == 25
+    assert result["total_results"] == 42
+
+    sent_params = route.calls[0].request.url.params
+    assert sent_params["start"] == "25"
+    assert sent_params["sort"] == "-coverdate"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_search_papers_default_sort_and_start(
+    api_client: ElsevierAPIClient,
+    sample_scopus_search_response: dict[str, Any],
+) -> None:
+    """Verify search_papers defaults to start=0 and citedby-count ordering."""
+    route = respx.get(f"{BASE_URL}/content/search/scopus").respond(
+        status_code=200, json=sample_scopus_search_response
+    )
+    handlers = ToolHandlers(client=api_client)
+
+    result = await handlers.search_papers({"query": "transformers"})
+    assert result["success"] is True
+    assert result["start"] == 0
+
+    sent_params = route.calls[0].request.url.params
+    assert sent_params["start"] == "0"
+    assert sent_params["sort"] == "citedby-count"
+
+
+@pytest.mark.asyncio
+async def test_search_papers_invalid_sort(api_client: ElsevierAPIClient) -> None:
+    """Verify search_papers rejects sort keys outside the supported set."""
+    handlers = ToolHandlers(client=api_client)
+    result = await handlers.search_papers({"query": "AI", "sort": "bogus"})
+    assert result["success"] is False
+    assert "Validation error" in result["error"]
+
+
+@pytest.mark.asyncio
+@respx.mock
 async def test_get_paper_abstract_eid(
     api_client: ElsevierAPIClient,
     sample_abstract_response: dict[str, Any],

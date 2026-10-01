@@ -19,6 +19,8 @@ class SearchBody(BaseModel):
     year: str | int | None = None
     open_access: bool = False
     count: int = 10
+    start: int = 0
+    sort: str | None = None
 
 
 class AbstractBody(BaseModel):
@@ -58,7 +60,10 @@ async def search_papers(
     arguments: dict[str, Any] = {
         "query": query,
         "count": max(1, min(body.count, 25)),
+        "start": max(0, min(body.start, 5999)),
     }
+    if body.sort:
+        arguments["sort"] = body.sort
     return await handlers.search_papers(arguments)
 
 

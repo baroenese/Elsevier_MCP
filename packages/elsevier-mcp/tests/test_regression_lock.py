@@ -146,7 +146,7 @@ async def test_success_shape_and_int_coercion(
     assert res["success"] is True
     assert isinstance(res["total_results"], int)
     assert res["total_results"] == 42
-    assert set(res.keys()) == {"success", "total_results", "papers", "query"}
+    assert set(res.keys()) == {"success", "total_results", "start", "papers", "query"}
 
 
 @respx.mock

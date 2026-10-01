@@ -190,6 +190,28 @@ async def test_search_papers_empty_query_error(client: httpx.AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_search_papers_pagination_passthrough(
+    client: httpx.AsyncClient, mock_handlers: MockToolHandlers
+):
+    payload = {"query": "quantum computing", "start": 50, "sort": "-coverdate"}
+    res = await client.post("/api/search", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert mock_handlers.last_search_args["start"] == 50
+    assert mock_handlers.last_search_args["sort"] == "-coverdate"
+
+
+@pytest.mark.asyncio
+async def test_search_papers_start_clamped(
+    client: httpx.AsyncClient, mock_handlers: MockToolHandlers
+):
+    res = await client.post("/api/search", json={"query": "quantum computing", "start": 9999})
+    assert res.status_code == 200
+    assert mock_handlers.last_search_args["start"] == 5999
+
+
+@pytest.mark.asyncio
 async def test_abstract_by_eid(client: httpx.AsyncClient, mock_handlers: MockToolHandlers):
     res = await client.post("/api/abstract", json={"eid": "2-s2.0-85000000001"})
     assert res.status_code == 200
