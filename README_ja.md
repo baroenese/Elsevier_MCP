@@ -218,13 +218,15 @@ export ELSEVIER_API_KEY="your_api_key_here"
 
 | ツール名 | 説明 | パラメータ |
 |---------|------|-----------|
-| `search_papers` | 論文検索（キーワードまたは `AUTH`, `TITLE`, `AFFIL`, `DOI` フィールド指定） | `query`, `count`, `year` |
+| `search_papers` | 論文検索（キーワードまたは `AUTH`, `TITLE`, `AFFIL`, `DOI` フィールド指定、ページング対応） | `query`, `count`, `year`, `start`, `sort` |
 | `get_paper_abstract` | 論文抄録取得 | `eid` または `doi` |
 | `get_journal_metrics` | ジャーナル評価指標取得（CiteScore、SJR、SNIP、Q1-Q4クォータイル、OA区分） | `title` または `issn` |
-| `get_author_info` | 著者情報取得 | `author_id` |
+| `get_author_info` | 著者情報取得（SciValエンタイトルメントが必要; 制限付きキーでは403） | `author_id` |
 | `analyze_research_trends` | 研究トレンド分析 | `field`, `years` |
 | `get_institution_papers` | 機関別論文統計 | `institution`, `year` |
 | `search_open_access_papers` | オープンアクセス論文検索 | `field`, `count` |
+| `search_author_papers` | 特定著者の論文検索（一般検索エンドポイント経由、`AUTH-ID`/`AUTH`＋所属フィルタ） | `author_id` または `author_name`, `affiliation`, `count`, `year`, `start`, `sort` |
+| `find_author_candidates` | 著者候補の同定（検索結果を著者IDまたは著者名＋所属ごとにグループ化し、ホモニム混入を検出） | `author_name`, `affiliation`, `count` |
 
 ## 📝 利用可能なMCPプロンプト (Prompts)
 

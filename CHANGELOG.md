@@ -36,6 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configured Nx task targets for testing, linting, building, and serving across Python and TypeScript projects.
 - Comprehensive automated test suite with unified `npx nx run-many -t test` spanning 68 tests across all 4 packages.
 - Frontend unit test suite in `apps/web/tests/` running on Node 24 native test runner (`node:test`).
+- Two new MCP tools, both working on keys without author-retrieval entitlements (via the general search endpoint):
+  - `search_author_papers`: publications by author through `AUTH-ID(...)`/`AUTH("...")` with an optional `AFFIL(...)` filter, count/year/start/sort.
+  - `find_author_candidates`: homonym disambiguation — samples search results and groups them by author ID (field-selected when the key allows it, with graceful fallback) or by creator name + affiliation.
+- `search_papers` gains pagination (`start` offset, 0–5999) and `sort` (`citedby-count`, `coverdate`, `relevancy` variants); the response echoes `start`.
+- `POST /api/author-papers` REST endpoint (FastAPI) exposing `search_author_papers`; `get_author_info` is intentionally not exposed because its SciVal endpoint returns 403 on restricted keys.
+- Institutions page in the web UI (institution/year form, `MetricTile` summary, top-cited papers table) — the backend endpoint previously had no frontend consumer; nav gains an Institutions tab.
+- Previous/Next pagination on the Search page driven by the new `start` parameter, with a result-range summary.
 - Root-segment App Router files for `apps/web`: global error boundary (`error.tsx`) with retry, route-transition loading skeleton (`loading.tsx`), and 404 page (`not-found.tsx`).
 - Package-specific `packages/elsevier-mcp/README.md`; `MANIFEST.in` trimmed to files that actually exist in the package directory.
 - Version drift guard test locking `server.VERSION` to the pyproject `[project].version`.
@@ -43,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Dropped the unused `mcp>=1.0.0` dependency (the stdio JSON-RPC protocol is hand-rolled); `requirements.txt` synced.
+- Documented live-verified API-key entitlement limits in the dev runbook: citation overview and ScienceDirect article retrieval return 403, SciVal author analytics 403 (so `get_author_info` errors on restricted keys), and general search rejects `AUTH-ID(...)` with 400 while `field=authid` is silently dropped.
 - `.env` template renamed to `.env.example` and unignored (the `.env.*` ignore rule previously made it uncommittable).
 - Dev runbook `.agents/skills/elsevier-mcp-dev/SKILL.md` refreshed to the monorepo layout (five-step tool workflow, shared helpers, live-tested API-key entitlement limits); AGENTS.md no longer claims PyPI distribution.
 

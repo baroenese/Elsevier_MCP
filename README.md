@@ -218,13 +218,15 @@ Input questions like the following:
 
 | Tool Name | Description | Parameters |
 |-----------|-------------|------------|
-| `search_papers` | Paper search (supports keywords and `AUTH`, `TITLE`, `AFFIL`, `DOI` field codes) | `query`, `count`, `year` |
+| `search_papers` | Paper search (supports keywords and `AUTH`, `TITLE`, `AFFIL`, `DOI` field codes) with pagination | `query`, `count`, `year`, `start`, `sort` |
 | `get_paper_abstract` | Paper abstract retrieval | `eid` or `doi` |
 | `get_journal_metrics` | Journal metrics & impact lookup (CiteScore, SJR, SNIP, Q1-Q4 quartiles, Open Access) | `title` or `issn` |
-| `get_author_info` | Author information | `author_id` |
+| `get_author_info` | Author information (requires SciVal entitlement; 403 on restricted keys) | `author_id` |
 | `analyze_research_trends` | Research trend analysis | `field`, `years` |
 | `get_institution_papers` | Institution paper statistics | `institution`, `year` |
 | `search_open_access_papers` | Open access paper search | `field`, `count` |
+| `search_author_papers` | Author paper search via the general search endpoint (`AUTH-ID`/`AUTH` + optional affiliation filter) | `author_id` or `author_name`, `affiliation`, `count`, `year`, `start`, `sort` |
+| `find_author_candidates` | Author disambiguation — groups search hits by author ID or name + affiliation to expose homonyms | `author_name`, `affiliation`, `count` |
 
 ## 📝 Available MCP Prompts
 
