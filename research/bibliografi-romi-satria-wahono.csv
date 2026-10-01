@@ -1,0 +1,58 @@
+year,title,venue,doi,citations
+2026,"PRO-LGBM: A synergistic integrated pipeline for outlier detection and imbalance handling with optimized LightGBM in fetal health classification","Franklin Open",10.1016/j.fraope.2026.100628,0
+2025,"Hybrid SMOTE-Evolutionary Algorithm-AdaBoost for Lithology Prediction Using K-Nearest Neighbor","",10.1109/icoailo66760.2025.11155926,0
+2022,"Metode Pembobotan Jarak dengan Koefisien Variasi untuk Mengatasi Kelemahan Euclidean Distance pada Algoritma k-Nearest Neighbor","Jurnal Ilmiah SINUS",10.30646/sinus.v20i1.565,0
+2019,"U-control Chart Based Differential Evolution Clustering for Determining the Number of Cluster in k -Means","International journal of intelligent engineering and systems",10.22266/ijies2019.0831.28,6
+2018,"GAME PUZZLE BERBASIS FUZZY C-MEAN UNTUK MEMETAKAN SOAL UJIAN NASIONAL FISIKA SMA","Jurnal Teknodik",10.32550/teknodik.v14i1.450,1
+2018,"SISTEM E-LEARNING BERBASIS MODEL MOTIVASI KOMUNITAS","Jurnal Teknodik",10.32550/teknodik.v21i3.469,23
+2017,"Penerapan Jaringan Syaraf Tiruan Backpropagation Dalam Prediksi Produksi Bahan Pangan Pokok di Indonesia","Jurnal Teknik Informatika",10.51998/jti.v3i1.123,0
+2017,"TACKLING IMBALANCED CLASS IN SOFTWARE DEFECT PREDICTION USING TWO-STEP CLUSTER BASED RANDOM UNDERSAMPLING AND STACKING TECHNIQUE","Jurnal Teknologi",10.11113/jt.v79.11874,10
+2015,"A Systematic Literature Review of Requirements Engineering for Self-Adaptive Systems","",,11
+2015,"Absolute Correlation Weighted Naïve Bayes for Software Defect Prediction","",,7
+2015,"Color and Texture Feature Extraction Using Gabor Filter - Local Binary Patterns for Image Segmentation with Fuzzy C-Means","Journal of Intelligent Systems",,24
+2015,"Comparative Analysis of Mamdani, Sugeno and Tsukamoto Method of Fuzzy Inference System for Air Conditioner Energy Saving","Journal of Intelligent Systems",,34
+2015,"Hybrid Keyword Extraction Algorithm and Cosine Similarity for Improving Sentences Cohesion in Text Summarization","Journal of Intelligent Systems",,4
+2015,"Integrasi Discrete Wavelet Transform dan Singular Value Decomposition pada Watermarking Citra untuk Perlindungan Hak Cipta","Journal of Intelligent Systems",,4
+2015,"Integrasi Kromosom Buatan Dinamis untuk Memecahkan Masalah Konvergensi Prematur pada Algoritma Genetika untuk Traveling Salesman Problem","Journal of Intelligent Systems",,5
+2015,"Integrasi Metode Information Gain untuk Seleksi Fitur dan AdaBoost untuk Mengurangi Bias pada Analisis Sentimen Review Restoran Menggunakan Algoritma Naive Bayes","Journal of Intelligent Systems",,13
+2015,"Integrasi Metode Sample Bootstrapping dan Weighted Principal Component Analysis untuk Meningkatkan Performa k Nearest Neighbor pada Dataset Besar","Journal of Intelligent Systems",,12
+2015,"Integrasi Pareto Fitness, Multiple-Population Dan Temporary Population Pada Algoritma Genetika Untuk Pembangkitan Data Tes Pada Pengujian Perangkat Lunak","So'peuteuweeo gonghag yeon'gu hoeji",,0
+2015,"Integrasi SMOTE Dan Information Gain Pada Naive Bayes Untuk Prediksi Cacat Software","So'peuteuweeo gonghag yeon'gu hoeji",,10
+2015,"Komparasi Algoritma Klasifikasi Machine Learning Dan Feature Selection pada Analisis Sentimen Review Film","Journal of Intelligent Systems",,56
+2015,"Komparasi Metode Machine Learning dan Metode Non Machine Learning untuk Estimasi Usaha Perangkat Lunak","So'peuteuweeo gonghag yeon'gu hoeji",,6
+2015,"Pemilihan Parameter Smoothing pada Probabilistic Neural Network dengan Menggunakan Particle Swarm Optimization untuk Pendeteksian Teks Pada Citra","Journal of Intelligent Systems",,1
+2015,"Penanganan Fitur Kontinyu dengan Feature Discretization Berbasis Expectation Maximization Clustering untuk Klasifikasi Spam Email Menggunakan Algoritma ID3","Journal of Intelligent Systems",,1
+2015,"Pendekatan Level Data untuk Menangani Ketidakseimbangan Kelas pada Prediksi Cacat Software","So'peuteuweeo gonghag yeon'gu hoeji",,18
+2015,"Penerapan Adaboost untuk Penyelesaian Ketidakseimbangan Kelas pada Penentuan Kelulusan Mahasiswa dengan Metode Decision Tree","Journal of Intelligent Systems",,27
+2015,"Penerapan Bootstrapping untuk Ketidakseimbangan Kelas dan Weighted Information Gain untuk Feature Selection pada Algoritma Support Vector Machine untuk Prediksi Loyalitas Pelanggan","Journal of Intelligent Systems",,4
+2015,"Penerapan Gravitational Search Algorithm untuk Optimasi Klasterisasi Fuzzy C-Means","Journal of Intelligent Systems",,2
+2015,"Penerapan Java Dynamic Compilation Pada Metode Java Customized Class Loader Untuk Memperbaharui Perangkat Lunak Pada Saat Runtime Dengan Lebih Efisien","So'peuteuweeo gonghag yeon'gu hoeji",,0
+2015,"Penerapan Metode Average Gain, Threshold Pruning dan Cost Complexity Pruning Untuk Split Atribut Pada Algoritma C4.5","Journal of Intelligent Systems",,8
+2015,"Penerapan Metode Distance Transform Pada Linear Discriminant Analysis Untuk Kemunculan Kulit Pada Deteksi Kulit","Journal of Intelligent Systems",,10
+2015,"Penerapan Naive Bayes untuk Mengurangi Data Noise pada Klasifikasi Multi Kelas dengan Decision Tree","",,7
+2015,"Penerapan Reduksi Region Palsu Berbasis Mathematical Morphology pada Algoritma Adaboost Untuk Deteksi Plat Nomor Kendaraan Indonesia","Journal of Intelligent Systems",,3
+2015,"Penerapan Teknik Ensemble untuk Menangani Ketidakseimbangan Kelas pada Prediksi Cacat Software","So'peuteuweeo gonghag yeon'gu hoeji",,23
+2015,"Penggunaan Random Under Sampling untuk Penanganan Ketidakseimbangan Kelas pada Prediksi Cacat Software Berbasis Neural Network","So'peuteuweeo gonghag yeon'gu hoeji",,9
+2015,"Two-Step Cluster Based Feature Discretization of Naive Bayes for Outlier Detection in Intrinsic Plagiarism Detection","Journal of Intelligent Systems",,1
+2014,"A Comparison Framework of Classification Models for Software Defect Prediction","Advanced Science Letters",10.1166/asl.2014.5640,35
+2014,"Metaheuristic Optimization based Feature Selection for Software Defect Prediction","Journal of Software",10.4304/jsw.9.5.1324-1333,67
+2014,"Neural Network Parameter Optimization Based on Genetic Algorithm for Software Defect Prediction","Advanced Science Letters",10.1166/asl.2014.5641,35
+2013,"Combining Particle Swarm Optimization based Feature Selection and Bagging Technique for Software Defect Prediction","International Journal of Software Engineering and Its Applications",10.14257/ijseia.2013.7.5.16,65
+2013,"Genetic Feature Selection for Software Defect Prediction","Advanced Science Letters",10.1166/asl.2014.5283,49
+2011,"SIMULASI PENERAPAN ANFIS PADA SISTEM LAMPU LALU LINTAS ENAM RUAS","DOAJ (DOAJ: Directory of Open Access Journals)",,3
+2003,"A framework for object identification and refinement process in object-oriented analysis and design","",10.1109/coginf.2002.1039317,16
+2003,"ANALYZING REQUIREMENTS ENGINEERING PROBLEMS","",,11
+2003,"Cognitive-Decision-Making Issues for Software Agents","Brain and Mind",10.1023/a:1025413930296,6
+2003,"Extensible requirements patterns of web application for efficient web application development","",10.1109/cw.2002.1180908,9
+2003,"IlmuKomputer.Com: Toward A New Strategy to Develop A Free Web Based Learning and Teaching Environment","",,1
+2003,"OOExpert: An Agent Based System for Identifying and Refining Objects from Software Requirements Based on Object Based Formal Specification","",,0
+2003,"XRPWeb: Extensible Requirements Patterns for Web Application Development","",,0
+2002,"On the Requirements Pattern of Software Engineering","",,4
+2002,"Toward a Method for Eliciting Software Requirements Using Constraint Natural Language","",,11
+2001,"Multi Agent Systems: Issues, Approaches and Challenges Multi Agent System: Beberapa Isu, Pendekatan dan Tantangan","",,0
+2001,"Object Based Formal Specification: Methodological Support for Specifying Requirements in Object Model Creation Process","",,0
+2001,"Pengantar Software Agent: Teori dan Aplikasi","",,4
+2001,"Towards The Use of Intelligent Agents in Collaborative Object-Oriented Analysis and Design","Proceedings of the Annual Conference of JSAI Proceedings of the 15th Annual Conference of JSAI, 2001",10.11517/pjsai.jsai01.0.68.0,1
+2000,"Reasoning with Cases in the CBR System: A Case Study for Applying OOExpert System","",,1
+1994,"en nu uj ju u K Ke eb be eb ba as sa an n y ya an ng g M Me em mb be eb ba as sk ka an n","",,0
+,"BOOTSTRAPPING AND WEIGHTED INFORMATION GAIN IN SUPPORT VECTOR MACHINE ","RePEc: Research Papers in Economics",,0
