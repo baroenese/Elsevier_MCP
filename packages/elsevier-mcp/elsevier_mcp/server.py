@@ -12,7 +12,7 @@ from elsevier_mcp.handlers import ToolHandlers, define_tools
 from elsevier_mcp.prompts import define_prompts, get_prompt
 from elsevier_mcp.resources import define_resource_templates, define_resources, read_resource
 
-VERSION = "1.2.1"
+VERSION = "1.3.0"
 
 logger = logging.getLogger("elsevier_mcp.server")
 

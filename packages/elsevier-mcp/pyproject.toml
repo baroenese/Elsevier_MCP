@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "elsevier-mcp-server"
-version = "1.2.1"
+version = "1.3.0"
 description = "MCP server for Elsevier academic APIs including Scopus, SciVal, and Abstract Retrieval."
 readme = "README.md"
 requires-python = ">=3.10"

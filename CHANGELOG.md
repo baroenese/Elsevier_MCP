@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tools/call` maps unexpected handler exceptions to JSON-RPC `-32603` instead of crashing the stdio loop.
 - Removed legacy `elsevier_webapp.py` (superseded by `apps/api`) and its `static/` assets; `next lint` script (removed in Next 16) replaced with ESLint.
 
-## [Unreleased]
+## [1.3.0] - 2026-10-01
 
 ### Added
 - Converted repository into an Nx monorepo orchestrating:
