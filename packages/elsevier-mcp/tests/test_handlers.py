@@ -11,6 +11,7 @@ from elsevier_mcp.handlers import (
     ToolHandlers,
     _parse_author_names,
     build_scopus_query,
+    group_author_candidates,
     parse_paper_entry,
 )
 
@@ -454,3 +455,54 @@ async def test_find_author_candidates_falls_back_without_field(api_client: Elsev
 
     assert len(route.calls) == 2
     assert "field" not in route.calls[1].request.url.params
+
+
+# ---------------------------------------------------------------------------
+# author candidate grouping helpers
+# ---------------------------------------------------------------------------
+
+
+def test_group_author_candidates_empty_and_malformed() -> None:
+    """Verify grouping tolerates empty and malformed entries."""
+    assert group_author_candidates([]) == []
+
+    entries: list[Any] = ["not-a-dict", None, {"dc:creator": "Ok A."}]
+    candidates = group_author_candidates(entries)
+    assert len(candidates) == 1
+    assert candidates[0]["name"] == "Ok A."
+    assert candidates[0]["author_id"] is None
+    assert candidates[0]["document_count"] == 1
+
+
+def test_group_author_candidates_authid_variants() -> None:
+    """Verify author ID extraction from string authid and author-list forms."""
+    entries = [
+        {"dc:creator": "A One", "authid": "6701829689", "prism:coverDate": "2020-01-01"},
+        {
+            "dc:creator": "B Two",
+            "author": [{"authid": 6701829690, "preferred-name": {"ce:indexed-name": "Two B."}}],
+            "affiliation": {"affilname": "MIT"},
+            "prism:coverDate": "2021-06-06",
+        },
+    ]
+    candidates = group_author_candidates(entries)
+    assert len(candidates) == 2
+
+    by_name = {c["name"]: c for c in candidates}
+    assert by_name["A One"]["author_id"] == "6701829689"
+    assert by_name["B Two"]["author_id"] == "6701829690"
+    assert by_name["B Two"]["affiliations"] == ["MIT"]
+
+
+def test_group_author_candidates_latest_year_and_ordering() -> None:
+    """Verify latest-year tracking and document-count ordering."""
+    entries = [
+        {"dc:creator": "A", "prism:coverDate": "2019-01-01"},
+        {"dc:creator": "A", "prism:coverDate": "2022-05-05"},
+        {"dc:creator": "B", "prism:coverDate": "2021-01-01"},
+    ]
+    candidates = group_author_candidates(entries)
+    assert candidates[0]["name"] == "A"
+    assert candidates[0]["document_count"] == 2
+    assert candidates[0]["latest_year"] == "2022"
+    assert candidates[1]["name"] == "B"

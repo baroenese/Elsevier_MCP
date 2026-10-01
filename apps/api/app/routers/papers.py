@@ -46,6 +46,7 @@ class AuthorPapersBody(BaseModel):
     year: str | int | None = None
     count: int = 10
     start: int = 0
+    sort: str | None = None
 
 
 def _compose_search_query(body: SearchBody) -> str:
@@ -131,4 +132,6 @@ async def search_author_papers(
         arguments["affiliation"] = body.affiliation.strip()
     if body.year:
         arguments["year"] = str(body.year)
+    if body.sort:
+        arguments["sort"] = body.sort
     return await handlers.search_author_papers(arguments)

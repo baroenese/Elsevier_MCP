@@ -250,6 +250,26 @@ async def test_author_papers_requires_author(client: httpx.AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_author_papers_full_params_clamped(
+    client: httpx.AsyncClient, mock_handlers: MockToolHandlers
+):
+    payload = {
+        "author_name": "Wahono, R S",
+        "year": 2024,
+        "count": 100,
+        "start": 9999,
+        "sort": "-coverdate",
+    }
+    res = await client.post("/api/author-papers", json=payload)
+    assert res.status_code == 200
+    args = mock_handlers.last_author_papers_args
+    assert args["year"] == "2024"
+    assert args["count"] == 25
+    assert args["start"] == 5999
+    assert args["sort"] == "-coverdate"
+
+
+@pytest.mark.asyncio
 async def test_abstract_by_eid(client: httpx.AsyncClient, mock_handlers: MockToolHandlers):
     res = await client.post("/api/abstract", json={"eid": "2-s2.0-85000000001"})
     assert res.status_code == 200

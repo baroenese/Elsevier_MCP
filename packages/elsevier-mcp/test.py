@@ -4,7 +4,7 @@ Elsevier API 完全テストスイート（httpx 版）
 =====================
 
 このスクリプトは以下のElsevier APIをテストします：
-- Scopus Search API
+- Scopus Search API（ページング/ソート、著者別検索、著者候補グルーピング含む）
 - Abstract Retrieval API
 - ScienceDirect Full-Text API
 - SciVal Author Lookup API
@@ -18,6 +18,10 @@ Elsevier API 完全テストスイート（httpx 版）
 - ELSEVIER_INSTTOKEN: 機関トークン（ScienceDirectアクセス用）
 - TEST_EID: テスト対象論文のEID（任意）
 - TEST_AUTHOR_ID: テスト対象著者のScopus ID（任意）
+- TEST_AUTHOR_NAME: 著者別検索テスト用の著者名（任意、デフォルト "Wahono, R S"）
+
+備考: ScienceDirect全文・Author系エンドポイントは APIキーのエンタイトルメント次第で
+403/401 になる（サマリーでは「制限」と表示され、通常の失敗とは区別される）。
 """
 
 import os
@@ -39,6 +43,16 @@ class ElsevierAPITester:
         self.test_eid: str = os.getenv("TEST_EID", "2-s2.0-0035478854")
         self.test_author_id: str = os.getenv("TEST_AUTHOR_ID", "57215842016")
         self.test_orcid: str = "0000-0003-1419-2405"
+        self.test_author_name: str = os.getenv("TEST_AUTHOR_NAME", "Wahono, R S")
+
+        # エンタイトルメント制限があるため制限付きキーでは失敗が想定されるテスト
+        # （ライブ検証日: 2026-10-01、詳細は .agents/skills/elsevier-mcp-dev/SKILL.md）
+        self.known_limited: set[str] = {
+            "ScienceDirect Full-Text",
+            "Author Lookup",
+            "ORCID Search",
+            "Author Metrics",
+        }
 
         # APIベースURL
         self.base_urls: dict[str, str] = {
@@ -366,6 +380,166 @@ class ElsevierAPITester:
             print(f"❌ エラー: {e}")
             return False
 
+    def test_search_pagination(self) -> bool:
+        """Scopus Search ページング/ソートテスト（start/sort パラメータ）"""
+        print("\n📄 Scopus Search Pagination テスト")
+        print("-" * 40)
+
+        try:
+            page1 = self._get(
+                self.base_urls["scopus"],
+                params={
+                    "query": "TITLE-ABS-KEY(machine learning)",
+                    "count": 5,
+                    "start": 0,
+                    "sort": "citedby-count",
+                },
+            )
+            print(f"URL: {page1.url}")
+            print(f"Status: {page1.status_code}")
+
+            if page1.status_code != 200:
+                self._print_failure(page1)
+                return False
+
+            results1 = page1.json().get("search-results", {})
+            entries1 = results1.get("entry", []) or []
+            total = int(results1.get("opensearch:totalResults", 0))
+            print(f"✅ 成功: 総件数 {total:,} 件、1ページ目 {len(entries1)} 件取得")
+
+            citations = [int(e.get("citedby-count", 0)) for e in entries1]
+            if citations != sorted(citations, reverse=True):
+                print("❌ 失敗: citedby-count ソートが降順になっていません")
+                return False
+
+            page2 = self._get(
+                self.base_urls["scopus"],
+                params={
+                    "query": "TITLE-ABS-KEY(machine learning)",
+                    "count": 5,
+                    "start": 5,
+                    "sort": "citedby-count",
+                },
+            )
+            if page2.status_code != 200:
+                self._print_failure(page2)
+                return False
+
+            results2 = page2.json().get("search-results", {})
+            entries2 = results2.get("entry", []) or []
+            start_index = results2.get("opensearch:startIndex")
+            print(f"📄 2ページ目: start={start_index}, {len(entries2)} 件")
+
+            title1 = entries1[0].get("dc:title", "") if entries1 else ""
+            title2 = entries2[0].get("dc:title", "") if entries2 else ""
+            if str(start_index) != "5" or title1 == title2:
+                print("❌ 失敗: 2ページ目が正しくシフトしていません")
+                return False
+
+            print(f"📄 1ページ目先頭: {title1[:80]}...")
+            print(f"📄 2ページ目先頭: {title2[:80]}...")
+            return True
+
+        except Exception as e:
+            print(f"❌ エラー: {e}")
+            return False
+
+    def test_author_papers_search(self) -> bool:
+        """AUTH(\"...\") 著者別論文検索テスト（search_author_papers 相当）"""
+        print("\n👥 Author Papers Search テスト")
+        print("-" * 40)
+
+        try:
+            response = self._get(
+                self.base_urls["scopus"],
+                params={
+                    "query": f'AUTH("{self.test_author_name}")',
+                    "count": 3,
+                    "sort": "citedby-count",
+                },
+            )
+            print(f"URL: {response.url}")
+            print(f"Status: {response.status_code}")
+
+            if response.status_code != 200:
+                self._print_failure(response)
+                return False
+
+            data = response.json()
+            results = data.get("search-results", {})
+            total = int(results.get("opensearch:totalResults", 0))
+            entries = results.get("entry", []) or []
+            print(f"✅ 成功: AUTH(\"{self.test_author_name}\") → 総件数 {total:,} 件")
+            for entry in entries[:3]:
+                title = entry.get("dc:title", "タイトル不明")
+                creator = entry.get("dc:creator", "著者不明")
+                print(f"   📄 {title[:70]}... (筆頭著者: {creator})")
+
+            print("⚠️  注意: イニシャル名義はホモニム混入リスクあり — find_author_candidates で確認を推奨")
+            return True
+
+        except Exception as e:
+            print(f"❌ エラー: {e}")
+            return False
+
+    def test_find_author_candidates(self) -> bool:
+        """著者候補グルーピングテスト（find_author_candidates 相当）"""
+        print("\n🔍 Author Candidates Grouping テスト")
+        print("-" * 40)
+
+        try:
+            response = self._get(
+                self.base_urls["scopus"],
+                params={
+                    "query": f'AUTH("{self.test_author_name}")',
+                    "count": 10,
+                    "sort": "citedby-count",
+                    "field": "dc:creator,authid,affilname,prism:coverDate",
+                },
+            )
+            print(f"URL: {response.url}")
+            print(f"Status: {response.status_code}")
+
+            if response.status_code != 200:
+                self._print_failure(response)
+                return False
+
+            data = response.json()
+            entries = data.get("search-results", {}).get("entry", []) or []
+
+            # クライアント側でグルーピング（MCP find_author_candidates と同じ発想）
+            grouped: dict[str, int] = {}
+            authids: set[str] = set()
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                creator = entry.get("dc:creator", "Unknown")
+                affils = entry.get("affiliation") or []
+                affil_names = [
+                    str(a.get("affilname", "")) for a in (affils if isinstance(affils, list) else [affils]) if isinstance(a, dict)
+                ]
+                key = f"{creator} @ {', '.join(n for n in affil_names if n) or '所属不明'}"
+                grouped[key] = grouped.get(key, 0) + 1
+                raw_authid = entry.get("authid")
+                if isinstance(raw_authid, list):
+                    authids.update(str(x) for x in raw_authid if x)
+                elif raw_authid:
+                    authids.add(str(raw_authid))
+
+            print(f"✅ 成功: {len(entries)} 件のサンプルから {len(grouped)} 候補にグループ化")
+            for key, count in sorted(grouped.items(), key=lambda kv: kv[1], reverse=True)[:5]:
+                print(f"   👤 {key} ({count} 件)")
+            if authids:
+                print(f"🆔 取得できた著者ID: {', '.join(sorted(authids))}")
+            else:
+                print("🆔 著者IDは返却されませんでした（制限付きキーの通常挙動、名前＋所属でグループ化）")
+            print("⚠️  注意: 複数候補が出た場合、同姓同名（ホモニム）混入の可能性あり")
+            return True
+
+        except Exception as e:
+            print(f"❌ エラー: {e}")
+            return False
+
     def run_all_tests(self) -> int:
         """すべてのテストを実行し、成功数を返す。
 
@@ -386,6 +560,9 @@ class ElsevierAPITester:
 
         results = {
             "Scopus Search": self.test_scopus_search(),
+            "Scopus Pagination": self.test_search_pagination(),
+            "Author Papers Search": self.test_author_papers_search(),
+            "Author Candidates Grouping": self.test_find_author_candidates(),
             "Abstract Retrieval": self.test_abstract_retrieval(),
             "Journal Metrics": self.test_journal_metrics(),
             "ScienceDirect Full-Text": self.test_sciencedirect_fulltext(),
@@ -400,20 +577,28 @@ class ElsevierAPITester:
         print("=" * 50)
 
         success_count = 0
+        limited_failure_count = 0
         for test_name, success in results.items():
-            status = "✅ 成功" if success else "❌ 失敗"
-            print(f"{test_name}: {status}")
             if success:
+                print(f"{test_name}: ✅ 成功")
                 success_count += 1
+            elif test_name in self.known_limited:
+                print(f"{test_name}: ⚠️  制限（エンタイトルメントなし、想定内）")
+                limited_failure_count += 1
+            else:
+                print(f"{test_name}: ❌ 失敗")
 
-        print(f"\n📈 成功率: {success_count}/{len(results)} ({success_count / len(results) * 100:.1f}%)")
+        print(
+            f"\n📈 成功率: {success_count}/{len(results)} "
+            f"({success_count / len(results) * 100:.1f}%)、"
+            f"内 {limited_failure_count} 件はエンタイトルメント制限"
+        )
 
-        if success_count == len(results):
-            print("🎉 すべてのAPIが正常に動作しています！")
-        elif success_count >= len(results) * 0.8:
-            print("🌟 大部分のAPIが動作しています。")
+        unexpected_failures = len(results) - success_count - limited_failure_count
+        if unexpected_failures == 0:
+            print("🎉 全ての利用可能なAPIが正常に動作しています！")
         else:
-            print("⚠️  一部のAPIで問題があります。設定を確認してください。")
+            print("⚠️  想定外の失敗があります。設定を確認してください。")
 
         return success_count
 

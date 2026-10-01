@@ -7,10 +7,12 @@ from pydantic import ValidationError
 
 from elsevier_mcp.schemas import (
     AnalyzeResearchTrendsInput,
+    FindAuthorCandidatesInput,
     GetAuthorInfoInput,
     GetInstitutionPapersInput,
     GetJournalMetricsInput,
     GetPaperAbstractInput,
+    SearchAuthorPapersInput,
     SearchOpenAccessPapersInput,
     SearchPapersInput,
 )
@@ -37,6 +39,79 @@ def test_search_papers_input_count_bounds() -> None:
 
     with pytest.raises(ValidationError):
         SearchPapersInput(query="AI", count=30)
+
+
+def test_search_papers_input_pagination() -> None:
+    """Verify SearchPapersInput pagination defaults, bounds, and sort keys."""
+    data = SearchPapersInput(query="AI")
+    assert data.start == 0
+    assert data.sort is None
+
+    data = SearchPapersInput(query="AI", start=25, sort="-coverdate")
+    assert data.start == 25
+    assert data.sort == "-coverdate"
+
+    with pytest.raises(ValidationError):
+        SearchPapersInput(query="AI", start=-1)
+
+    with pytest.raises(ValidationError):
+        SearchPapersInput(query="AI", start=6000)
+
+    with pytest.raises(ValidationError, match="sort must be one of"):
+        SearchPapersInput(query="AI", sort="bogus")
+
+
+def test_search_author_papers_input() -> None:
+    """Verify SearchAuthorPapersInput requires an author and validates options."""
+    with pytest.raises(ValidationError, match="Either 'author_id' or 'author_name'"):
+        SearchAuthorPapersInput()
+
+    data = SearchAuthorPapersInput(author_id=" 55239922200 ")
+    assert data.author_id == "55239922200"
+    assert data.author_name is None
+
+    data = SearchAuthorPapersInput(
+        author_name=" Wahono, Romi S. ",
+        affiliation=" Binus ",
+        year="2024",
+        sort="coverdate",
+        start=25,
+        count=25,
+    )
+    assert data.author_name == "Wahono, Romi S."
+    assert data.affiliation == "Binus"
+    assert data.year == "2024"
+    assert data.sort == "coverdate"
+
+    with pytest.raises(ValidationError, match="4-digit year"):
+        SearchAuthorPapersInput(author_id="55239922200", year="20x4")
+
+    with pytest.raises(ValidationError, match="sort must be one of"):
+        SearchAuthorPapersInput(author_id="55239922200", sort="nope")
+
+    with pytest.raises(ValidationError):
+        SearchAuthorPapersInput(author_id="55239922200", count=26)
+
+    with pytest.raises(ValidationError):
+        SearchAuthorPapersInput(author_id="55239922200", start=6000)
+
+
+def test_find_author_candidates_input() -> None:
+    """Verify FindAuthorCandidatesInput strips and bounds inputs."""
+    data = FindAuthorCandidatesInput(author_name="  Wahono, R S  ")
+    assert data.author_name == "Wahono, R S"
+    assert data.affiliation is None
+    assert data.count == 25
+
+    data = FindAuthorCandidatesInput(author_name="Wahono, R S", affiliation=" Binus ", count=1)
+    assert data.affiliation == "Binus"
+    assert data.count == 1
+
+    with pytest.raises(ValidationError):
+        FindAuthorCandidatesInput(author_name="   ")
+
+    with pytest.raises(ValidationError):
+        FindAuthorCandidatesInput(author_name="Wahono, R S", count=26)
 
 
 def test_get_paper_abstract_input() -> None:
