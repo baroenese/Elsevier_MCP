@@ -1,6 +1,2 @@
 include README.md
-include README_ja.md
-include LICENSE
 include requirements.txt
-include example_mcp_config.json
-recursive-include examples *.py
