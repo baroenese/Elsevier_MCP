@@ -2,8 +2,8 @@
 import sys
 from pathlib import Path
 
-# Ensure packages/elsevier-mcp is importable
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'packages' / 'elsevier-mcp'))
+# Ensure packages/elsevier-mcp is importable even without a venv editable install
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'packages' / 'elsevier-mcp'))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
