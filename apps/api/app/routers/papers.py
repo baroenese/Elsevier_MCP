@@ -37,6 +37,17 @@ class InstitutionBody(BaseModel):
     year: int = 2024
 
 
+class AuthorPapersBody(BaseModel):
+    """Author papers request body."""
+
+    author_id: str | None = None
+    author_name: str | None = None
+    affiliation: str | None = None
+    year: str | int | None = None
+    count: int = 10
+    start: int = 0
+
+
 def _compose_search_query(body: SearchBody) -> str:
     """Build Scopus query with optional author and open access clauses."""
     clauses = [f"TITLE-ABS-KEY({body.query.strip()})"]
@@ -92,3 +103,32 @@ async def get_institution(
     return await handlers.get_institution_papers(
         {"institution": body.institution.strip(), "year": body.year}
     )
+
+
+@router.post("/author-papers")
+async def search_author_papers(
+    body: AuthorPapersBody, handlers: ToolHandlers = Depends(get_handlers)
+) -> dict[str, Any]:
+    """Search papers by Scopus author via the general search endpoint.
+
+    Works with author_id (exact) or author_name plus an optional affiliation
+    filter; the author-retrieval and SciVal endpoints are not entitled on all
+    API keys, so this route never depends on them.
+    """
+    if not (body.author_id and body.author_id.strip()) and not (
+        body.author_name and body.author_name.strip()
+    ):
+        return {"success": False, "error": "Either author_id or author_name must be provided"}
+    arguments: dict[str, Any] = {
+        "count": max(1, min(body.count, 25)),
+        "start": max(0, min(body.start, 5999)),
+    }
+    if body.author_id and body.author_id.strip():
+        arguments["author_id"] = body.author_id.strip()
+    if body.author_name and body.author_name.strip():
+        arguments["author_name"] = body.author_name.strip()
+    if body.affiliation and body.affiliation.strip():
+        arguments["affiliation"] = body.affiliation.strip()
+    if body.year:
+        arguments["year"] = str(body.year)
+    return await handlers.search_author_papers(arguments)

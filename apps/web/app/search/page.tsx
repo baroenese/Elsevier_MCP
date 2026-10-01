@@ -16,6 +16,7 @@ export default function SearchPage() {
   const [statusMsg, setStatusMsg] = useState('');
   const [isError, setIsError] = useState(false);
   const [results, setResults] = useState<SearchResult | null>(null);
+  const [start, setStart] = useState(0);
 
   const [abstractData, setAbstractData] = useState<{
     title: string;
@@ -28,8 +29,7 @@ export default function SearchPage() {
   } | null>(null);
   const [loadingAbstract, setLoadingAbstract] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runSearch = async (offset: number) => {
     if (!query.trim()) return;
     setLoading(true);
     setStatusMsg('Searching...');
@@ -42,6 +42,7 @@ export default function SearchPage() {
         year: year || null,
         open_access: openAccess,
         count: parseInt(count),
+        start: offset,
       });
       if (!data.success) {
         setStatusMsg(data.error ?? 'Search failed');
@@ -50,6 +51,7 @@ export default function SearchPage() {
       }
       setStatusMsg('Done.');
       setResults(data);
+      setStart(offset);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An error occurred';
       setStatusMsg(msg);
@@ -57,6 +59,11 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    runSearch(0);
   };
 
   const openAbstractModal = async (eid: string, doi: string) => {
@@ -212,7 +219,14 @@ export default function SearchPage() {
           <strong className="text-zinc-900 dark:text-zinc-100">
             {fmt(results.total_results)}
           </strong>{' '}
-          papers found, showing top {results.papers?.length ?? 0} by citations.
+          papers found
+          {(results.total_results ?? 0) > 0 && (
+            <>
+              , showing{' '}
+              {fmt((results.start ?? 0) + 1)}–
+              {fmt((results.start ?? 0) + (results.papers?.length ?? 0))} sorted by citations.
+            </>
+          )}{' '}
           Query: <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{results.query}</code>
         </p>
       )}
@@ -263,6 +277,31 @@ export default function SearchPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {results?.success && (results.total_results ?? 0) > (results.papers?.length ?? 0) && (
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            disabled={loading || start === 0}
+            onClick={() => runSearch(Math.max(0, start - parseInt(count)))}
+            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Previous
+          </button>
+          <span className="text-[13px] text-zinc-500 tabular-nums dark:text-zinc-400">
+            Page {Math.floor(start / Math.max(parseInt(count), 1)) + 1}
+          </span>
+          <button
+            type="button"
+            disabled={loading || start + (results.papers?.length ?? 0) >= (results.total_results ?? 0)}
+            onClick={() => runSearch(start + parseInt(count))}
+            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Abstract Modal */}
       {(abstractData || loadingAbstract) && (

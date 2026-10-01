@@ -14,6 +14,7 @@ export interface Paper {
 export interface SearchResult {
   success: boolean;
   total_results?: number;
+  start?: number;
   papers?: Paper[];
   query?: string;
   error?: string;
@@ -63,6 +64,32 @@ export interface JournalCompareResult {
   error?: string;
 }
 
+export interface InstitutionResult {
+  success: boolean;
+  institution?: string;
+  year?: number;
+  total_papers?: number;
+  top_papers?: Array<{
+    title: string;
+    authors: string;
+    journal: string;
+    citations: number;
+    doi: string;
+  }>;
+  error?: string;
+}
+
+export interface AuthorPapersResult {
+  success: boolean;
+  total_results?: number;
+  start?: number;
+  author_id?: string | null;
+  author_name?: string | null;
+  papers?: Paper[];
+  query?: string;
+  error?: string;
+}
+
 export interface HealthResult {
   success: boolean;
   version: string;
@@ -96,6 +123,7 @@ export const api = {
     year?: string | null;
     open_access?: boolean;
     count?: number;
+    start?: number;
   }) => apiFetch<SearchResult>('/api/search', jsonPost(body)),
 
   abstract: (body: { eid?: string | null; doi?: string | null }) =>
@@ -121,6 +149,18 @@ export const api = {
       '/api/journal-compare',
       jsonPost({ queries }),
     ),
+
+  institution: (body: { institution: string; year?: number }) =>
+    apiFetch<InstitutionResult>('/api/institution', jsonPost(body)),
+
+  authorPapers: (body: {
+    author_id?: string | null;
+    author_name?: string | null;
+    affiliation?: string | null;
+    year?: string | null;
+    count?: number;
+    start?: number;
+  }) => apiFetch<AuthorPapersResult>('/api/author-papers', jsonPost(body)),
 
   health: () => apiFetch<HealthResult>('/api/health'),
 

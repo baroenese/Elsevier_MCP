@@ -17,6 +17,7 @@ class MockToolHandlers:
         self.last_search_args: dict[str, Any] | None = None
         self.last_abstract_args: dict[str, Any] | None = None
         self.last_institution_args: dict[str, Any] | None = None
+        self.last_author_papers_args: dict[str, Any] | None = None
         self.last_trends_args: dict[str, Any] | None = None
         self.last_journal_args: dict[str, Any] | None = None
         self.journal_arg_history: list[dict[str, Any]] = []
@@ -64,6 +65,18 @@ class MockToolHandlers:
             "year": arguments.get("year", 2024),
             "total_papers": 500,
             "top_papers": [],
+        }
+
+    async def search_author_papers(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        self.last_author_papers_args = arguments
+        return {
+            "success": True,
+            "total_results": 12,
+            "start": arguments.get("start", 0),
+            "author_id": arguments.get("author_id"),
+            "author_name": arguments.get("author_name"),
+            "papers": [],
+            "query": f'AUTH("{arguments.get("author_name", "")}")',
         }
 
     async def analyze_research_trends(self, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -209,6 +222,31 @@ async def test_search_papers_start_clamped(
     res = await client.post("/api/search", json={"query": "quantum computing", "start": 9999})
     assert res.status_code == 200
     assert mock_handlers.last_search_args["start"] == 5999
+
+
+@pytest.mark.asyncio
+async def test_author_papers_by_name(
+    client: httpx.AsyncClient, mock_handlers: MockToolHandlers
+):
+    payload = {"author_name": "Wahono, Romi S.", "affiliation": "Universitas Bina Nusantara"}
+    res = await client.post("/api/author-papers", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert data["total_results"] == 12
+    assert mock_handlers.last_author_papers_args["author_name"] == "Wahono, Romi S."
+    assert (
+        mock_handlers.last_author_papers_args["affiliation"] == "Universitas Bina Nusantara"
+    )
+
+
+@pytest.mark.asyncio
+async def test_author_papers_requires_author(client: httpx.AsyncClient):
+    res = await client.post("/api/author-papers", json={"affiliation": "MIT"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is False
+    assert "author_id or author_name" in data["error"]
 
 
 @pytest.mark.asyncio

@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test';
  * regardless of backend health.
  */
 
-const NAV_TABS = ['Search', 'Trends', 'Journals', 'Settings'];
+const NAV_TABS = ['Search', 'Trends', 'Journals', 'Institutions', 'Settings'];
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -19,7 +19,7 @@ test('root redirects to the search page', async ({ page }) => {
   await expect(page).toHaveURL(/\/search$/);
 });
 
-test('nav exposes all four sections', async ({ page }) => {
+test('nav exposes all five sections', async ({ page }) => {
   for (const label of NAV_TABS) {
     await expect(page.getByRole('tab', { name: label })).toBeVisible();
   }
@@ -39,6 +39,12 @@ test('journals page renders the metrics lookup', async ({ page }) => {
   await page.getByRole('tab', { name: 'Journals' }).click();
   await expect(page).toHaveURL(/\/journals$/);
   await expect(page.locator('form, input').first()).toBeVisible();
+});
+
+test('institutions page renders the analysis form', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Institutions' }).click();
+  await expect(page).toHaveURL(/\/institutions$/);
+  await expect(page.getByText('Institution name', { exact: true })).toBeVisible();
 });
 
 test('settings page renders the credential form', async ({ page }) => {
