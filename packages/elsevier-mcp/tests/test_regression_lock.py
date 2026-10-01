@@ -5,6 +5,8 @@ These tests assert on response shapes and error-message formats that callers
 public contract changed unintentionally.
 """
 
+import re
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -13,7 +15,7 @@ import respx
 
 from elsevier_mcp.client import BASE_URL
 from elsevier_mcp.handlers import ToolHandlers, parse_paper_entry
-from elsevier_mcp.server import ElsevierMCPServer
+from elsevier_mcp.server import VERSION, ElsevierMCPServer
 
 
 @pytest.fixture
@@ -232,3 +234,16 @@ async def _call(server: ElsevierMCPServer, tool: str, arguments: dict) -> dict:
         server,
         {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": tool, "arguments": arguments}},
     )
+
+
+# ---------------------------------------------------------------------------
+# version consistency
+# ---------------------------------------------------------------------------
+
+
+def test_version_matches_pyproject() -> None:
+    """server.VERSION and pyproject.toml [project].version must never drift."""
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    match = re.search(r'^version = "([^"]+)"', pyproject.read_text(encoding="utf-8"), re.MULTILINE)
+    assert match, "pyproject.toml is missing its [project] version"
+    assert VERSION == match.group(1)
